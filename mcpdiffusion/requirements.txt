@@ -1,0 +1,9 @@
+fastmcp==3.4.2
+elasticsearch
+uvicorn
+requests
+bs4
+starlette
+httpx
+python-dotenv
+trafilatura

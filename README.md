@@ -1,2 +1,3 @@
 # mcp_diffusion
-MCP server
+
+Source code of the mcp server

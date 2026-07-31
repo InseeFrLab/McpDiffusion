@@ -3,6 +3,7 @@ elasticsearch
 uvicorn
 requests
 bs4
+lxml
 starlette
 httpx
 python-dotenv

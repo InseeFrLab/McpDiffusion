@@ -1,3 +1,5 @@
 # Ignore environment files
+.venv/
 *.env
 __pycache__/
+mcp*

@@ -15,6 +15,7 @@ from tools.insee_get_document import register_get_insee_document
 from tools.insee_get_homepage import register_get_insee_homepage
 from tools.insee_search_documents import register_search_insee_documents
 from tools.insee_search_conjoncture import register_search_insee_conjoncture
+from tools.insee_search_chiffrecle import register_search_insee_chiffreclef
 from tools.rmes_query import register_query_insee_rmes
 from tools.rmes_claude_rework import register_rmes_tools
 
@@ -26,6 +27,7 @@ def register_tools(mcp: FastMCP) -> None:
     register_get_insee_homepage(mcp)
     register_get_insee_document(mcp)
     register_search_insee_conjoncture(mcp)
+    register_search_insee_chiffreclef(mcp)
 
     # Melodi
     register_search_melodi_datasets(mcp)

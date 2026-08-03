@@ -16,24 +16,35 @@ from tools.insee_get_homepage import register_get_insee_homepage
 from tools.insee_search_documents import register_search_insee_documents
 from tools.insee_search_conjoncture import register_search_insee_conjoncture
 from tools.insee_search_chiffrecle import register_search_insee_chiffreclef
-from tools.rmes_query import register_query_insee_rmes
 from tools.rmes_claude_rework import register_rmes_tools
 
-
-def register_tools(mcp: FastMCP) -> None:
+def register_tools(mcp: FastMCP, toollist:str|None=None) -> None:
     """Register all MCP tools with the given FastMCP instance."""
     # INSEE.fr
-    register_search_insee_documents(mcp)
-    register_get_insee_homepage(mcp)
-    register_get_insee_document(mcp)
-    register_search_insee_conjoncture(mcp)
-    register_search_insee_chiffreclef(mcp)
+    if toollist==("insee"):
+        register_search_insee_documents(mcp)
+        register_get_insee_homepage(mcp)
+        register_get_insee_document(mcp)
+        register_search_insee_conjoncture(mcp)
+        register_search_insee_chiffreclef(mcp)
 
     # Melodi
-    register_search_melodi_datasets(mcp)
-    register_search_melodi_modalities(mcp)
-    register_get_melodi_observations(mcp)
+    if toollist==("melodi"):
+        register_search_melodi_datasets(mcp)
+        register_search_melodi_modalities(mcp)
+        register_get_melodi_observations(mcp)
 
     # RMES (SPARQL)
-    #register_query_insee_rmes(mcp)
-    register_rmes_tools(mcp)
+    if toollist==("rmes"):
+        register_rmes_tools(mcp)
+
+    else:
+        register_search_insee_documents(mcp)
+        register_get_insee_homepage(mcp)
+        register_get_insee_document(mcp)
+        register_search_insee_conjoncture(mcp)
+        register_search_insee_chiffreclef(mcp)
+        register_search_melodi_datasets(mcp)
+        register_search_melodi_modalities(mcp)
+        register_get_melodi_observations(mcp)
+        register_rmes_tools(mcp)

@@ -266,7 +266,7 @@ SEARCH_CONJONCTURE = {
 GET_HOMEPAGE = {
     "tool_name": "get_insee_homepage",
     "tool_description": (
-        "Retrieve the INSEE home page with the latest key indicators "
+        "Retrieve the INSEE home page with the latest key indicators at national level"
         "published by the institute (population, inflation, unemployment, "
         "GDP growth, ...).\n"
         "\n"

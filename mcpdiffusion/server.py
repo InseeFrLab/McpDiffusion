@@ -25,7 +25,9 @@ logger = logging.getLogger(MAIN_LOGGER_NAME)
 
 mcp = FastMCP("mcp-INSEE")
 
-register_tools(mcp)
+toollist=os.getenv("TOOLLIST", None)
+
+register_tools(mcp, toollist=None)
 
 app = mcp.http_app()
 

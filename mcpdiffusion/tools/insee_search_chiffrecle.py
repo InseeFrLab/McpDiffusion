@@ -85,6 +85,7 @@ class SearchInseeDocumentsOutput(BaseModel):
     count: int
 
 
+
 def register_search_insee_chiffreclef(mcp: FastMCP) -> None:
     @mcp.tool(
         name=SEARCH_CHIFFRECLEF["tool_name"],

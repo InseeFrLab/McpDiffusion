@@ -1,20 +1,18 @@
 """
-Tools: RMES_list_graphs, RMES_describe_resource, RMES_run_sparql
+Shared infrastructure for RMES (INSEE SPARQL) tools.
 
-Accès en lecture à RMES, la base de métadonnées / nomenclatures / définitions
-de l'INSEE (endpoint SPARQL public). Ne contient pas les chiffres/données
-(voir get_MELODI_datasets pour ça).
+Contains: HTTP client, SPARQL execution engine, error types, category
+taxonomy, graph cache, and all constants used by the three RMES tools.
 """
 
 import logging
 import re
 import time
 from enum import StrEnum
-from typing import Any, Literal, Optional
+from typing import Any, Optional
 
 import httpx
-from fastmcp import FastMCP
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 logger = logging.getLogger("mcp.rmes")
 
@@ -239,7 +237,7 @@ def _category_choices_doc() -> str:
 
 
 _CATEGORY_FIELD_DESCRIPTION = (
-    "Catégorie de graphes à cibler. Attention les graphes des qualites sont nombreux (600 au total)\n" #+ _category_choices_doc()
+    "Catégorie de graphes à cibler. Attention les graphes des qualites sont nombreux (600 au total)\n"
 )
 
 
@@ -263,6 +261,11 @@ avec ce tool.
 # ---------------------------------------------------------------------------
 # Schémas Pydantic -- erreurs
 # ---------------------------------------------------------------------------
+
+class GraphRow(BaseModel):
+    graph: str
+    triples: int
+
 
 class SparqlErrorType(StrEnum):
     INVALID_QUERY_FORM = "INVALID_QUERY_FORM"
@@ -410,321 +413,3 @@ async def _get_raw_graph_rows() -> dict[str, Any]:
         _GRAPH_CACHE["ts"] = now
 
     return {"rows": _GRAPH_CACHE["data"]}
-
-
-# ---------------------------------------------------------------------------
-# Schémas Pydantic -- RMES_list_graphs
-# ---------------------------------------------------------------------------
-
-class ListGraphsInput(BaseModel):
-    contains: Optional[str] = Field(
-        default=None,
-        description=(
-            "Filtre les graphes dont l'URI contient cette sous-chaîne (insensible à la "
-            "casse), ex. 'naf' ou 'qualite/rapport'. Active automatiquement le détail "
-            "complet (`graphs`) dans les catégories retenues."
-        ),
-        examples=["naf", "qualite/rapport", "geo"],
-    )
-    category: GraphCategoryChoice = Field(
-        default=GraphCategoryChoice.ALL,
-        description=_CATEGORY_FIELD_DESCRIPTION,
-    )
-    expand: bool = Field(
-        default=False,
-        description=(
-            "Si True, inclut la liste complète des graphes (URI + nb de triplets) pour "
-            "chaque catégorie retenue, au lieu de seulement quelques exemples. Se "
-            "déclenche automatiquement si `contains` est fourni ou `category != ALL`."
-        ),
-    )
-
-
-class GraphRow(BaseModel):
-    graph: str
-    triples: int
-
-
-class CategoryBucket(BaseModel):
-    category: str
-    label: str
-    description: str
-    count: int
-    total_triples: int
-    examples: list[str]
-    graphs: Optional[list[GraphRow]] = None
-
-
-class ListGraphsOutput(BaseModel):
-    total_graphs_matched: int
-    categories: list[CategoryBucket]
-    error: Optional[SparqlError] = None
-
-
-def _build_category_summary(rows: list[dict[str, Any]]) -> list[CategoryBucket]:
-    buckets: dict[str, CategoryBucket] = {}
-    for row in rows:
-        cat = _categorize(row["graph"])
-        bucket = buckets.get(cat.key)
-        if bucket is None:
-            bucket = CategoryBucket(
-                category=cat.key,
-                label=cat.label,
-                description=cat.description,
-                count=0,
-                total_triples=0,
-                examples=[],
-            )
-            buckets[cat.key] = bucket
-        bucket.count += 1
-        bucket.total_triples += row["triples"]
-        if len(bucket.examples) < 5:
-            bucket.examples.append(row["graph"])
-
-    ordered_keys = [c.key for c in CATEGORY_DEFS] + [_CATEGORY_AUTRE.key]
-    return [buckets[k] for k in ordered_keys if k in buckets]
-
-
-# ---------------------------------------------------------------------------
-# Schémas Pydantic -- RMES_describe_resource
-# ---------------------------------------------------------------------------
-
-class DescribeResourceInput(BaseModel):
-    uri: str = Field(
-        description="URI complète de la ressource RDF à décrire.",
-        examples=["http://id.insee.fr/codes/naf2025/section/A"],
-    )
-    graph: str|None = Field(
-        default=None,
-        description=(
-            "URI d'un graphe nommé pour restreindre la recherche. Sans cette valeur (None par défaut), "
-            "la recherche se fait sur tous les graphes (plus lent)."
-        ),
-    )
-
-
-class ResourceProperty(BaseModel):
-    graph: str
-    direction: Literal["outgoing", "incoming"]
-    predicate: str
-    value: str
-    value_type: Optional[str] = None
-    lang: Optional[str] = None
-
-
-class DescribeResourceOutput(BaseModel):
-    uri: str
-    properties: list[ResourceProperty]
-    count: int
-    error: Optional[SparqlError] = None
-
-
-def _parse_bindings_to_properties(bindings: list[dict[str, Any]]) -> list[ResourceProperty]:
-    props: list[ResourceProperty] = []
-    for b in bindings:
-        props.append(
-            ResourceProperty(
-                graph=b["g"]["value"],
-                direction=b["direction"]["value"],
-                predicate=b["p"]["value"],
-                value=b["o"]["value"],
-                value_type=b["o"].get("type"),
-                lang=b["o"].get("xml:lang"),
-            )
-        )
-    return props
-
-
-# ---------------------------------------------------------------------------
-# Schémas Pydantic -- RMES_run_sparql
-# ---------------------------------------------------------------------------
-
-class RunSparqlInput(BaseModel):
-    full_sparql_query: str = Field(
-        description="Requête SPARQL complète (SELECT / ASK / CONSTRUCT / DESCRIBE).",
-    )
-    timeout: float = Field(
-        default=DEFAULT_TIMEOUT,
-        description=f"Timeout en secondes (plafonné à {MAX_TIMEOUT}s).",
-        gt=0,
-    )
-    max_rows: int = Field(
-        default=DEFAULT_ROW_LIMIT,
-        description=f"Limite de lignes ajoutée si absente de la requête (plafonnée à {MAX_ROW_LIMIT}).",
-        ge=1,
-        le=MAX_ROW_LIMIT,
-    )
-
-
-class RunSparqlOutput(BaseModel):
-    format: Literal["json", "turtle"] = "json"
-    limit_added: Optional[int] = None
-    hint: Optional[str] = None
-    # Résultats SELECT/ASK : variables déclarées + lignes brutes (bindings SPARQL JSON).
-    # On garde les lignes en dict libre plutôt que de les typer entièrement : les
-    # variables retournées dépendent entièrement de la requête SPARQL de l'appelant,
-    # les figer dans un schéma fixe serait soit incomplet, soit un schéma générique
-    # sans valeur ajoutée par rapport à un dict.
-    variables: Optional[list[str]] = None
-    bindings: Optional[list[dict[str, Any]]] = None
-    # Résultat CONSTRUCT/DESCRIBE
-    turtle: Optional[str] = None
-    error: Optional[SparqlError] = None
-
-
-# ---------------------------------------------------------------------------
-# Enregistrement des tools MCP
-# ---------------------------------------------------------------------------
-
-def register_rmes_tools(mcp: FastMCP) -> None:
-
-    @mcp.tool(
-        name="RMES_list_graphs",
-        description="""
-Liste les graphes nommés disponibles dans la base RDF de l'INSEE (RMES). Utilise ce tool
-EN PREMIER pour découvrir quels graphes existent avant d'écrire une requête SPARQL avec
-RMES_run_sparql -- il y a plus de 700 graphes.
-
-Par défaut (`category=ALL`), le résultat est une vue CONDENSÉE par catégorie, avec un
-compteur et quelques URIs d'exemple par catégorie -- pas la liste plate des 700+ graphes.
-Choisis une catégorie précise dans le paramètre `category` pour cibler une famille, ou
-utilise `contains` pour une recherche libre par sous-chaîne. Une catégorie "autre" recueille
-tout graphe ne correspondant à aucune famille connue.
-""".strip(),
-    )
-    async def list_graphs(params: ListGraphsInput) -> ListGraphsOutput:
-        raw = await _get_raw_graph_rows()
-        if "error" in raw:
-            return ListGraphsOutput(
-                total_graphs_matched=0,
-                categories=[],
-                error=SparqlError(**raw["error"]),
-            )
-        rows = raw["rows"]
-        expand = params.expand
-
-        if params.contains:
-            needle = params.contains.lower()
-            rows = [r for r in rows if needle in r["graph"].lower()]
-            expand = True
-
-        if params.category != GraphCategoryChoice.ALL:
-            rows = [r for r in rows if _categorize(r["graph"]).key == params.category.value]
-            expand = True
-
-        summary = _build_category_summary(rows)
-
-        if expand:
-            rows_by_graph = {r["graph"]: r["triples"] for r in rows}
-            for bucket in summary:
-                bucket_rows = [
-                    GraphRow(graph=g, triples=t)
-                    for g, t in rows_by_graph.items()
-                    if _categorize(g).key == bucket.category
-                ]
-                bucket_rows.sort(key=lambda r: r.triples, reverse=True)
-                bucket.graphs = bucket_rows
-
-        return ListGraphsOutput(total_graphs_matched=len(rows), categories=summary)
-
-    @mcp.tool(
-        name="RMES_describe_resource",
-        description="""
-Récupère toutes les propriétés connues (prédicat -> valeur) d'une ressource RDF
-identifiée par son URI complète. Combine automatiquement les propriétés où la ressource
-est sujet ET celles où elle est objet (utile pour remonter des relations skos:broader
-par exemple). Restreins avec `graph` si tu sais déjà où chercher -- sinon la recherche
-se fait sur tous les graphes, ce qui est plus lent.
-""".strip(),
-    )
-    async def describe_resource(params: DescribeResourceInput) -> DescribeResourceOutput:
-        graph_clause = f"<{params.graph}>" if params.graph else "?g"
-        graph_values = f"VALUES ?g {{ <{params.graph}> }}" if params.graph else ""
-        query = f"""
-        SELECT ?g ?direction ?p ?o WHERE {{
-          {graph_values}
-          {{
-            GRAPH {graph_clause} {{ <{params.uri}> ?p ?o }}
-            BIND("outgoing" AS ?direction)
-          }} UNION {{
-            GRAPH {graph_clause} {{ ?o ?p <{params.uri}> }}
-            BIND("incoming" AS ?direction)
-          }}
-        }} LIMIT {MAX_ROW_LIMIT}
-        """
-        result = await _execute_sparql(query, timeout=DEFAULT_TIMEOUT, max_rows=MAX_ROW_LIMIT)
-
-        if "error" in result:
-            return DescribeResourceOutput(
-                uri=params.uri, properties=[], count=0, error=SparqlError(**result["error"])
-            )
-
-        properties = _parse_bindings_to_properties(result["results"]["bindings"])
-        return DescribeResourceOutput(uri=params.uri, properties=properties, count=len(properties))
-
-    @mcp.tool(
-        name="RMES_run_sparql",
-        description=f"""
-Exécute une requête SPARQL libre sur RMES, la base de métadonnées, nomenclatures et
-définitions de l'INSEE (elle ne contient PAS les chiffres/données, voir
-get_MELODI_datasets pour ça).
-
-AVANT d'écrire une requête complexe : appelle RMES_list_graphs pour connaître les
-catégories de graphes disponibles.
-
-Bonnes pratiques :
-- Toujours filtrer sur un ou plusieurs graphes précis avec GRAPH <uri> {{ ... }} ou
-  VALUES ?g {{ <uri1> <uri2> }} plutôt que de scanner tous les graphes.
-- Toujours ajouter FILTER(lang(?label) = "fr") sur les littéraux SKOS pour éviter
-  les doublons multilingues.
-- Une clause LIMIT est fortement recommandée ; si absente, `max_rows` est ajoutée
-  automatiquement (indiqué dans la réponse via `limit_added`/`hint`).
-- Vocabulaires : skos (concepts, labels, broader/narrower), xkos (nomenclatures
-  statistiques : ClassificationLevel, ExplanatoryNote), dcterms (métadonnées),
-  rdf.insee.fr/def/{{geo,demo,base}}# (vocabulaires INSEE).
-
-{KNOWN_VOCABULARIES_NOTE}
-
-Exemple -- recherche de codes NAF contenant "extraction" :
-PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
-SELECT ?s ?label WHERE {{
-  GRAPH <http://rdf.insee.fr/graphes/codes/naf2025> {{
-    ?s skos:prefLabel ?label .
-    FILTER(lang(?label) = "fr")
-    FILTER(CONTAINS(LCASE(STR(?label)), "extraction"))
-  }}
-}} LIMIT 10
-
-Les requêtes CONSTRUCT/DESCRIBE renvoient du Turtle (`format="turtle"`, champ `turtle`)
-plutôt que des lignes (`format="json"`, champs `variables`/`bindings`).
-""".strip(),
-    )
-    async def run_sparql(params: RunSparqlInput) -> RunSparqlOutput:
-        if not params.full_sparql_query or not params.full_sparql_query.strip():
-            return RunSparqlOutput(
-                error=SparqlError(
-                    type=SparqlErrorType.EMPTY_QUERY,
-                    message="La requête est vide.",
-                    query=params.full_sparql_query,
-                )
-            )
-
-        max_rows = max(1, min(params.max_rows, MAX_ROW_LIMIT))
-        result = await _execute_sparql(params.full_sparql_query, timeout=params.timeout, max_rows=max_rows)
-
-        if "error" in result:
-            return RunSparqlOutput(error=SparqlError(**result["error"]))
-
-        if result.get("format") == "turtle":
-            return RunSparqlOutput(
-                format="turtle", limit_added=result.get("limit_added") and max_rows, turtle=result["data"]
-            )
-
-        meta = result.get("_meta", {})
-        return RunSparqlOutput(
-            format="json",
-            limit_added=meta.get("limit_added"),
-            hint=meta.get("hint"),
-            variables=result.get("head", {}).get("vars"),
-            bindings=result.get("results", {}).get("bindings"),
-        )

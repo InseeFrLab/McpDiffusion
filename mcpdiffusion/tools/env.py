@@ -359,6 +359,59 @@ RMES_SPARQL = {
     "tool_metadata": {"version": "5.0", "author": "mirlon"},
 }
 
+RMES_LIST_GRAPHS = {
+    "tool_name": "RMES_list_graphs",
+    "tool_description": (
+        "Liste les graphes nommés disponibles dans la base RDF de l'INSEE (RMES). "
+        "Utilise ce tool EN PREMIER pour découvrir quels graphes existent avant "
+        "d'écrire une requête SPARQL avec RMES_run_sparql -- il y a plus de 700 graphes.\n"
+        "\n"
+        "Par défaut (`category=ALL`), le résultat est une vue CONDENSÉE par catégorie, "
+        "avec un compteur et quelques URIs d'exemple par catégorie -- pas la liste plate "
+        "des 700+ graphes. Choisis une catégorie précise dans le paramètre `category` "
+        "pour cibler une famille, ou utilise `contains` pour une recherche libre par "
+        "sous-chaîne. Une catégorie \"autre\" recueille tout graphe ne correspondant à "
+        "aucune famille connue."
+    ),
+    "tool_metadata": {"version": "5.0", "author": "mirlon"},
+}
+
+RMES_DESCRIBE_RESOURCE = {
+    "tool_name": "RMES_describe_resource",
+    "tool_description": (
+        "Récupère toutes les propriétés connues (prédicat -> valeur) d'une ressource RDF "
+        "identifiée par son URI complète. Combine automatiquement les propriétés où la "
+        "ressource est sujet ET celles où elle est objet (utile pour remonter des relations "
+        "skos:broader par exemple). Restreins avec `graph` si tu sais déjà où chercher -- "
+        "sinon la recherche se fait sur tous les graphes, ce qui est plus lent."
+    ),
+    "tool_metadata": {"version": "5.0", "author": "mirlon"},
+}
+
+RMES_RUN_SPARQL = {
+    "tool_name": "RMES_run_sparql",
+    "tool_description": (
+        "Exécute une requête SPARQL libre sur RMES, la base de métadonnées, nomenclatures "
+        "et définitions de l'INSEE (elle ne contient PAS les chiffres/données, voir "
+        "get_MELODI_datasets pour ça).\n"
+        "\n"
+        "AVANT d'écrire une requête complexe : appelle RMES_list_graphs pour connaître les "
+        "catégories de graphes disponibles.\n"
+        "\n"
+        "Bonnes pratiques :\n"
+        "- Toujours filtrer sur un ou plusieurs graphes précis avec GRAPH <uri> { ... } ou "
+        "  VALUES ?g { <uri1> <uri2> } plutôt que de scanner tous les graphes.\n"
+        "- Toujours ajouter FILTER(lang(?label) = \"fr\") sur les littéraux SKOS pour éviter "
+        "  les doublons multilingues.\n"
+        "- Une clause LIMIT est fortement recommandée ; si absente, `max_rows` est ajoutée "
+        "  automatiquement (indiqué dans la réponse via `limit_added`/`hint`).\n"
+        "- Vocabulaires : skos (concepts, labels, broader/narrower), xkos (nomenclatures "
+        "  statistiques : ClassificationLevel, ExplanatoryNote), dcterms (métadonnées), "
+        "  rdf.insee.fr/def/{geo,demo,base}# (vocabulaires INSEE).\n"
+    ),
+    "tool_metadata": {"version": "5.0", "author": "mirlon"},
+}
+
 
 # --- Shared enums / constants ----------------------------------------------
 
@@ -527,3 +580,41 @@ THEME_CONJ = Literal[
     "Transport and tourism",
     "Business financing",
 ]
+
+# --- Extras -----------------------------------------------------------------
+
+SEND_FEEDBACK = {
+    "tool_name": "send_feedback",
+    "tool_description": (
+        "Submit structured feedback about the MCP tools, server behavior, or user experience. "
+        "This tool appends a timestamped Markdown entry to the feedback log for administrator review.\n"
+        "\n"
+        "WHEN TO USE\n"
+        "- The user reports a bug, error, or unexpected behavior in any tool.\n"
+        "- The user suggests an improvement, new feature, or enhancement.\n"
+        "- The assistant encounters an issue during tool execution that should be logged.\n"
+        "- After completing a complex workflow where feedback on tool quality would be valuable.\n"
+        "\n"
+        "WHEN NOT TO USE\n"
+        "- For transient debugging or one-off troubleshooting (use terminal/logs instead).\n"
+        "- For questions about tool usage (ask the user or consult documentation).\n"
+        "\n"
+        "INPUT\n"
+        "- `username` -- identifier for the feedback author (e.g., user name, role, or session ID).\n"
+        "- `feedback` -- clear, actionable Markdown describing the issue or suggestion. "
+        "Include context (which tool, what happened), expected vs actual behavior, and "
+        "proposed solutions if applicable. Write as if filing a GitHub issue.\n"
+        "\n"
+        "OUTPUT\n"
+        "Confirmation message with the timestamp and path where feedback was recorded.\n"
+        "\n"
+        "EXAMPLES\n"
+        "✅ User: 'The search_melodi_datasets tool returned no results for \"prix du pain\" even though "
+        "the dataset exists.' → Log this as a bug report.\n"
+        "✅ User: 'It would be helpful if RMES_list_graphs could filter by triple count range.' → "
+        "Log this as a feature request.\n"
+        "✅ Assistant: 'During execution of get_insee_document, the markdown parser failed on nested "
+        "tables. This should be fixed.' → Log this as a technical issue.\n"
+    ),
+    "tool_metadata": {"version": "5.0", "author": "mirlon"},
+}

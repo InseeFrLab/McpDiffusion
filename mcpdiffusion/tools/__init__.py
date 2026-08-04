@@ -16,7 +16,10 @@ from tools.insee_get_homepage import register_get_insee_homepage
 from tools.insee_search_documents import register_search_insee_documents
 from tools.insee_search_conjoncture import register_search_insee_conjoncture
 from tools.insee_search_chiffrecle import register_search_insee_chiffreclef
-from tools.rmes_claude_rework import register_rmes_tools
+from tools.rmes_list_graphs import register_rmes_list_graphs
+from tools.rmes_describe_resource import register_rmes_describe_resource
+from tools.rmes_run_sparql import register_rmes_run_sparql
+from tools.extras_send_feedback import register_extras_send_feedback
 
 def register_tools(mcp: FastMCP, toollist:str|None=None) -> None:
     """Register all MCP tools with the given FastMCP instance."""
@@ -36,7 +39,9 @@ def register_tools(mcp: FastMCP, toollist:str|None=None) -> None:
 
     # RMES (SPARQL)
     if toollist==("rmes"):
-        register_rmes_tools(mcp)
+        register_rmes_list_graphs(mcp)
+        register_rmes_describe_resource(mcp)
+        register_rmes_run_sparql(mcp)
 
     else:
         register_search_insee_documents(mcp)
@@ -47,4 +52,7 @@ def register_tools(mcp: FastMCP, toollist:str|None=None) -> None:
         register_search_melodi_datasets(mcp)
         register_search_melodi_modalities(mcp)
         register_get_melodi_observations(mcp)
-        register_rmes_tools(mcp)
+        register_rmes_list_graphs(mcp)
+        register_rmes_describe_resource(mcp)
+        register_rmes_run_sparql(mcp)
+        register_extras_send_feedback(mcp)

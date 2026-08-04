@@ -10,6 +10,7 @@ MCP server that exposes INSEE (French National Institute of Statistics and Econo
 - [Data Sources](#data-sources)
 - [Architecture](#architecture)
 - [Available Tools](#available-tools)
+- [LLM Usage Guide](#llm-usage-guide)
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
 - [Configuration](#configuration)
@@ -83,14 +84,30 @@ The server boots, loads environment variables, calls `register_tools(mcp)` to at
 
 | Tool | Source | Description |
 |---|---|---|
-| `get_insee_homepage` | insee.fr | Retrieve the latest key indicators published on the INSEE homepage. Prefer this for generic, up-to-date questions (inflation, unemployment, GDP, …). |
+| `get_insee_homepage` | insee.fr | Retrieve the latest key indicators published on the INSEE homepage (inflation, unemployment, GDP, …). Prefer this for generic, up-to-date questions. |
 | `search_insee_documents` | insee.fr | Search the INSEE catalogue of detailed publications (Insee Première, Insee Analyses, Dossiers, Références, Chiffres-clés, …). |
-| `get_insee_documents` | insee.fr | Fetch and parse a specific INSEE publication from a known URL (`/fr/statistiques/<id>`). |
+| `get_insee_document` | insee.fr | Fetch and parse a specific INSEE publication from a known URL (`/fr/statistiques/<id>`). |
 | `search_insee_conjoncture` | insee.fr | Search the *Informations rapides* (rapid releases) index by topic, date and geography. |
-| `search_MELODI_datasets` | MELODI | Search the Melodi dataset catalogue with a natural-language French query. |
-| `search_MELODI_modalities` | MELODI | Given a dataset and column identifiers, rank the most relevant modality codes/labels for a free-text query. |
-| `get_MELODI_datasets` | MELODI | Retrieve filtered observations from a Melodi dataset (dimensions, attributes, numeric measure with unit). |
-| `RMES_run_sparql` | RMES | Run a SPARQL query against the INSEE semantic graph (concept definitions and code lists). The only tool that works **without** an Elasticsearch instance. |
+| `search_insee_chiffreclef` | insee.fr | Search key figures and synthetic statistics (population, regional comparisons, simple factual questions). |
+| `search_melodi_datasets` | MELODI | Search the Melodi dataset catalogue with a natural-language French query. |
+| `search_melodi_modalities` | MELODI | Given a dataset and column identifiers, rank the most relevant modality codes/labels for a free-text query. |
+| `get_melodi_observations` | MELODI | Retrieve filtered observations from a Melodi dataset (dimensions, attributes, numeric measure with unit). |
+| `RMES_list_graphs` | RMES | List available named graphs in the INSEE semantic database, grouped by category (nomenclatures, concepts, operations, …). Use this first to discover the graph structure. |
+| `RMES_describe_resource` | RMES | Retrieve all properties (predicate → value) of a specific RDF resource identified by its URI. Useful for exploring concept definitions or classification hierarchies. |
+| `RMES_run_sparql` | RMES | Run a SPARQL query against the INSEE semantic graph (concept definitions, code lists, metadata). The only tool that works **without** an Elasticsearch instance. |
+| `send_feedback` | Extras | Submit structured feedback about tool behavior, bugs, or suggestions for improvement. Appends timestamped entries to the feedback log. |
+
+## LLM Usage Guide
+
+For detailed guidance on how to effectively use these tools as a Large Language Model, see [**SKILL.md**](SKILL.md). It includes:
+
+- Tool selection decision trees
+- Workflow patterns for each data source
+- Common pitfalls and how to avoid them
+- SPARQL query templates
+- MELODI three-step workflow (search → modalities → observations)
+
+The skill file is designed to be loaded into your context when working with INSEE data through this MCP server.
 
 ## Prerequisites
 

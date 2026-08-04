@@ -23,11 +23,11 @@ load_dotenv()
 logger = logging.getLogger(MAIN_LOGGER_NAME)
 
 
-mcp = FastMCP("mcp-INSEE")
+mcp = FastMCP("INSEE-mcp-diffusion")
 
 toollist=os.getenv("TOOLLIST", None)
 
-register_tools(mcp, toollist=None)
+register_tools(mcp, toollist=toollist)
 
 app = mcp.http_app()
 

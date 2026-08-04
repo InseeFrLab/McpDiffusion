@@ -1,6 +1,13 @@
 ---
 name: insee-mcp-tools
-description: "Use INSEE MCP server tools (publications, datasets, SPARQL) for French statistical data. Routes queries to insee.fr, MELODI, or RMES based on data type."
+description: "Use when the user asks for French statistics, INSEE data, economic indicators, publications, classification codes (NAF, PCS, COICOP), or needs to query French demographic/economic datasets. Routes to insee.fr (publications), MELODI (datasets), or RMES (SPARQL) based on data type."
+version: 1.0.0
+author: mirlon382
+license: Apache-2.0
+metadata:
+  hermes:
+    tags: [mcp, statistics, france, insee, sparql, data, publications]
+    related_skills: []
 ---
 
 # INSEE MCP Server - Tool Usage Guide
@@ -10,6 +17,30 @@ description: "Use INSEE MCP server tools (publications, datasets, SPARQL) for Fr
 This skill guides effective use of the INSEE MCP server, which exposes French National Institute of Statistics (INSEE) data through three complementary data sources: **insee.fr** (publications), **MELODI** (datasets), and **RMES** (semantic graph/SPARQL).
 
 **Core principle**: Always start with discovery tools before making specific queries. INSEE's data is vast and highly structured — guessing dataset IDs, URLs, or SPARQL patterns will fail.
+
+---
+
+## When to Use
+
+**Use this skill when**:
+- User asks about French statistics (inflation, unemployment, GDP, population, etc.)
+- User needs INSEE publications, reports, or analyses
+- User wants raw statistical datasets or time series from France
+- User needs concept definitions, classifications, or metadata (NAF codes, PCS, COICOP, etc.)
+- User mentions French nomenclatures or asks "what is X" for a statistical concept
+- User asks about demographic or economic data specific to France or French regions
+- User wants to query the INSEE semantic graph or RDF data
+
+## When NOT to Use
+
+**Do not use this skill for**:
+- Statistics from other countries (Germany, US, EU-wide Eurostat, etc.)
+- Generic data analysis, CSV manipulation, or database queries unrelated to INSEE
+- PDF/document processing that isn't fetching INSEE publications
+- Visualization or dashboard creation (unless specifically about displaying INSEE data)
+- Debugging SPARQL queries for non-INSEE endpoints (DBpedia, Wikidata, etc.)
+- General economic theory or statistical methodology questions
+- Tools or APIs that aren't the INSEE MCP server
 
 ---
 
@@ -236,3 +267,17 @@ send_feedback(
   feedback="## Bug Report\n\n**Tool**: search_melodi_datasets\n\n**Issue**: Query 'prix pain' returns no results, but dataset DS_PRIX_PAIN exists.\n\n**Expected**: Should find at least one matching dataset.\n\n**Proposed fix**: Check if the Elasticsearch index includes this dataset."
 )
 ```
+
+---
+
+## Verification Checklist
+
+Before responding to the user, verify:
+
+- [ ] Identified the correct data source (insee.fr, MELODI, or RMES) based on query type
+- [ ] For MELODI queries: followed the 3-step workflow (search → modalities → observations)
+- [ ] For insee.fr queries: used French keywords in search queries
+- [ ] For RMES queries: included `GRAPH <uri>` clause in SPARQL
+- [ ] For RMES queries: added `FILTER(lang(?label) = "fr")` on SKOS labels
+- [ ] Never guessed dataset IDs, URLs, or modality codes — always discovered them first
+- [ ] If a tool returned an error or unexpected results, used `send_feedback` to report it

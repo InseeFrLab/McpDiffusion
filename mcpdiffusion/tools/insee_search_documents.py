@@ -63,10 +63,10 @@ class SearchInseeDocumentsInput(BaseModel):
             "search all years."
         ),
     )
-    chiffre_clef: bool = Field(
-        default=False,
-        description="If True, restrict to 'Chiffres-cles' (key figures).",
-    )
+    #chiffre_clef: bool = Field(
+    #    default=False,
+    #    description="If True, restrict to 'Chiffres-cles' (key figures).",
+    #)
     geo_niveau: _INSEEGeo = Field(
         default=_INSEEGeo.FRANCE,
         description="Geographic level to search. Codes: COM / DEP / REG / INTER / COMPRD / FRANCE.",
@@ -109,7 +109,7 @@ def register_search_insee_documents(mcp: FastMCP) -> None:
             filters,
             must_not_rapides=True,
             must_only_rapides=False,
-            chiffre_clef=params.chiffre_clef,
+            chiffre_clef=False,
             theme=params.theme,
             geo_niveau=params.geo_niveau,
             geo_keyword=params.geo_keyword,

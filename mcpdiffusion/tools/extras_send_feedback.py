@@ -43,7 +43,7 @@ class SendFeedbackOutput(BaseModel):
     status: str = "success"
     message: str
     timestamp: str
-    path: str
+    #path: str
 
 
 # ---------------------------------------------------------------------------
@@ -99,5 +99,5 @@ def register_extras_send_feedback(mcp: FastMCP) -> None:
         return SendFeedbackOutput(
             message=f"Feedback recorded successfully.",
             timestamp=timestamp,
-            path=str(feedback_path),
+            #path=str(feedback_path),
         )

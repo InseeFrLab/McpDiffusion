@@ -1,0 +1,51 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: es-restore-snapshot
+spec:
+  backoffLimit: 3
+  template:
+    spec:
+      restartPolicy: OnFailure
+      initContainers:
+        - name: wait-for-es
+          image: curlimages/curl:8.5.0
+          command:
+            - sh
+            - -c
+            - |
+              echo "Waiting for Elasticsearch..."
+              until curl -s -f http://elasticsearch-service:9200 >/dev/null; do
+                sleep 3
+              done
+              echo "Elasticsearch is up."
+      containers:
+        - name: restore
+          image: curlimages/curl:8.5.0
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              ES=http://elasticsearch-service:9200
+
+              echo "Registering snapshot repo..."
+              curl -s -X PUT "$ES/_snapshot/my_repo" \
+                -H 'Content-Type: application/json' \
+                -d '{ "type": "fs", "settings": { "location": "/usr/share/elasticsearch/backups" } }'
+
+              echo "Finding snapshot name..."
+              SNAPSHOT=$(curl -s "$ES/_snapshot/my_repo/_all" | \
+                sed -n 's/.*"snapshot":"\([^"]*\)".*/\1/p' | head -n1)
+
+              if [ -z "$SNAPSHOT" ]; then
+                echo "No snapshot found in repo!"
+                exit 1
+              fi
+              echo "Restoring snapshot: $SNAPSHOT"
+
+              curl -s -f -X POST "$ES/_snapshot/my_repo/$SNAPSHOT/_restore?wait_for_completion=true" \
+                -H 'Content-Type: application/json' \
+                -d '{}'
+
+              echo "Restore complete."

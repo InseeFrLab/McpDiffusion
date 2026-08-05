@@ -4,6 +4,8 @@
 
 MCP server that exposes INSEE (French National Institute of Statistics and Economic Studies) public data to Large Language Models. It combines three INSEE data sources behind a single [Model Context Protocol](https://modelcontextprotocol.io/) endpoint so that an LLM client can discover and call them as native tools.
 
+Server's URL : https://mcpdiffusion.lab.sspcloud.fr/mcp
+
 ## Table of Contents
 
 - [Features](#features)
@@ -123,7 +125,7 @@ The skill file is designed to be loaded into your context when working with INSE
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/<your-org>/mcp_diffusion.git
+git clone https://github.com/InseeFrLab/McpDiffusion.git
 cd mcp_diffusion
 ```
 
@@ -156,8 +158,6 @@ All settings live in `mcpdiffusion/.env`:
 | `MCP_PORT` | `8000` | HTTP port the FastMCP server listens on. |
 | `ES_HOST` | `http://elasticsearch:9200` | Elasticsearch URL when running in Docker. |
 | `ES_HOST_LOCAL` | `http://localhost:9200` | Elasticsearch URL when running on the host. |
-| `ES_ID` | — | Elasticsearch username. |
-| `ES_MDP` | — | Elasticsearch password. |
 
 Additional optional variable: `LOG_LEVEL` (default `INFO`).
 

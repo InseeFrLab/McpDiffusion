@@ -31,8 +31,8 @@ from elasticsearch import Elasticsearch
 from elasticsearch.dsl import Q, Search
 from pydantic import BaseModel, Field
 
-from helpers.es import INDEX_PRODUITS, get_es_client
-from tools.env import KEYS_THEME_NIV1, DICT_GEO
+from .es import INDEX_PRODUITS, get_es_client
+from ..tools.env import KEYS_THEME_NIV1, DICT_GEO
 
 
 class DocumentHit(BaseModel):

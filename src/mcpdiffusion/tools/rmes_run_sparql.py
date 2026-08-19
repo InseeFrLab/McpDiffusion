@@ -10,8 +10,8 @@ from typing import Any, Literal, Optional
 from fastmcp import FastMCP
 from pydantic import BaseModel, Field
 
-from helpers.logging import log_tool
-from helpers.rmes import (
+from ..helpers.logging import log_tool
+from ..helpers.rmes import (
     DEFAULT_ROW_LIMIT,
     DEFAULT_TIMEOUT,
     KNOWN_VOCABULARIES_NOTE,
@@ -21,7 +21,7 @@ from helpers.rmes import (
     SparqlErrorType,
     _execute_sparql,
 )
-from tools.env import RMES_RUN_SPARQL
+from .env import RMES_RUN_SPARQL
 
 
 # ---------------------------------------------------------------------------

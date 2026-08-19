@@ -8,8 +8,8 @@ from __future__ import annotations
 from fastmcp import FastMCP
 from pydantic import BaseModel, Field
 
-from helpers.logging import log_tool
-from tools.env import DICT_KV, GET_HOMEPAGE
+from ..helpers.logging import log_tool
+from .env import DICT_KV, GET_HOMEPAGE
 
 
 class KeyValueIndicator(BaseModel):

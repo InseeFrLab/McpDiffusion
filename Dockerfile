@@ -18,7 +18,7 @@ RUN uv sync --no-dev --no-install-project --frozen
 RUN groupadd --gid 1000 app \
  && useradd --uid 1000 --gid 1000 --create-home --shell /usr/sbin/nologin app
 
-COPY --chown=app:app mcpdiffusion/ /app/mcpdiffusion/
+COPY --chown=app:app src/ /app/src/
 
 # Install the project itself
 RUN uv sync --no-dev --frozen
@@ -31,4 +31,4 @@ EXPOSE 8000
 # running the image standalone.
 ENV ES_HOST="http://elasticsearch:9200"
 
-CMD ["uv", "run", "python", "/app/mcpdiffusion/server.py"]
+CMD ["uv", "run", "python", "-m", "mcpdiffusion.server"]

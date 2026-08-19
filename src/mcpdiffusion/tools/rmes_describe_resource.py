@@ -10,14 +10,14 @@ from typing import Any, Literal, Optional
 from fastmcp import FastMCP
 from pydantic import BaseModel, Field
 
-from helpers.logging import log_tool
-from helpers.rmes import (
+from ..helpers.logging import log_tool
+from ..helpers.rmes import (
     DEFAULT_TIMEOUT,
     MAX_ROW_LIMIT,
     SparqlError,
     _execute_sparql,
 )
-from tools.env import RMES_DESCRIBE_RESOURCE
+from .env import RMES_DESCRIBE_RESOURCE
 
 
 # ---------------------------------------------------------------------------

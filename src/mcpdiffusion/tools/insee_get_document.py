@@ -17,9 +17,9 @@ from pydantic import BaseModel, Field
 from trafilatura import extract
 from trafilatura.settings import Extractor
 
-from helpers.logging import log_tool
-from helpers.schemas import fail
-from tools.env import GET_DOCUMENT
+from ..helpers.logging import log_tool
+from ..helpers.schemas import fail
+from .env import GET_DOCUMENT
 
 
 BASE_URL = "https://www.insee.fr"

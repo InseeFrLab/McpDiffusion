@@ -1,0 +1,25 @@
+[project]
+name = "mcpdiffusion"
+version = "0.1.0"
+description = "MCP server for INSEE data diffusion"
+requires-python = ">=3.12"
+dependencies = [
+    "fastmcp==3.4.2",
+    "elasticsearch==9.5.0",
+    "uvicorn==0.52.4",
+    "requests==2.34.2",
+    "beautifulsoup4==4.15.0",
+    "lxml==6.1.2",
+    "starlette==1.6.0",
+    "httpx==0.28.1",
+    "python-dotenv==1.2.3",
+    "trafilatura==2.2.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["mcpdiffusion"]
+

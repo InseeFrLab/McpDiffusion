@@ -1,0 +1,37 @@
+services:
+  mcp-inspector:
+    image: ghcr.io/modelcontextprotocol/inspector:latest
+    container_name: mcp-inspector
+    ports:
+      - "6274:6274"   # Web UI, à ouvrir dans le navigateur
+      - "6277:6277"   # Serveur proxy interne de l'inspector (client MCP + API)
+    
+    #volumes:
+      # Conserve la liste des serveurs / config entre deux `docker compose up`
+    #  - inspector-config:/home/node/.mcp-inspector
+    depends_on:
+      - mcpdiffusion
+    networks:
+      - elastic
+
+  mcpdiffusion:
+    image: localhost/mcpdiffusion:1.0 
+    container_name: mcp-diffusion
+    ports:
+      - "8000:8000"
+    env_file:
+      - mcp-diffusion.env
+    #volumes:
+    #  - ./feedback:/app/mcpdiffusion/feedback
+    networks:
+      - elastic
+  
+
+
+networks:
+  elastic:
+    external: true #need to exist oc podman network create elastic
+
+
+volumes:
+  inspector-config:

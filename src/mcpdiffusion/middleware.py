@@ -30,9 +30,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         # Identifier le client par son IP
         client_ip = request.client.host if request.client else "unknown"
 
-        # Cle unique : IP + prefixe de route
-        path = request.url.path
-        rate_key = f"{client_ip}:{path}"
+        rate_key = f"{client_ip}"
 
         # Verifier le rate limit
         if not _limiter.hit(_rate, rate_key):

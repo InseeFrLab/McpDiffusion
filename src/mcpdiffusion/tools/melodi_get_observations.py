@@ -10,9 +10,9 @@ import httpx
 from fastmcp import FastMCP
 from pydantic import BaseModel, Field
 
-from helpers.logging import log_tool
-from helpers.schemas import fail
-from tools.env import GET_DATASET
+from ..helpers.logging import log_tool
+from ..helpers.schemas import fail
+from .env import GET_DATASET
 
 
 MELODI_DATA_BASE_URL = "https://api.insee.fr/melodi/data"

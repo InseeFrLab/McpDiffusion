@@ -13,15 +13,15 @@ from elasticsearch import TransportError
 from fastmcp import FastMCP
 from pydantic import BaseModel, Field
 
-from helpers.es_search import (
+from ..helpers.es_search import (
     DocumentHit,
     apply_collection_filters,
     build_text_clauses,
     execute_search,
 )
-from helpers.logging import log_tool
-from helpers.schemas import fail
-from tools.env import SEARCH_CHIFFRECLEF
+from ..helpers.logging import log_tool
+from ..helpers.schemas import fail
+from .env import SEARCH_DOCUMENTS
 
 
 class _INSEETheme(StrEnum):
@@ -47,12 +47,15 @@ class _INSEEGeo(StrEnum):
     FRANCE = "FRANCE"
 
 
-class SearchInseeChiffrecleInput(BaseModel):
+class SearchInseeDocumentsInput(BaseModel):
     query: str = Field(
         description="Natural-language search query describing the statistics to retrieve.",
         examples=["population de Lyon", "taux de chomage 2024", "PIB France"],
     )
-
+    theme: _INSEETheme = Field(
+        default=_INSEETheme.ALL,
+        description="Optional top-level INSEE theme used to restrict the search. Default: ALL.",
+    )
     year_of_reference: Optional[int] = Field(
         default=None,
         description=(
@@ -60,7 +63,10 @@ class SearchInseeChiffrecleInput(BaseModel):
             "search all years."
         ),
     )
-
+    #chiffre_clef: bool = Field(
+    #    default=False,
+    #    description="If True, restrict to 'Chiffres-cles' (key figures).",
+    #)
     geo_niveau: _INSEEGeo = Field(
         default=_INSEEGeo.FRANCE,
         description="Geographic level to search. Codes: COM / DEP / REG / INTER / COMPRD / FRANCE.",
@@ -85,16 +91,15 @@ class SearchInseeDocumentsOutput(BaseModel):
     count: int
 
 
-
-def register_search_insee_chiffreclef(mcp: FastMCP) -> None:
+def register_search_insee_documents(mcp: FastMCP) -> None:
     @mcp.tool(
-        name=SEARCH_CHIFFRECLEF["tool_name"],
-        description=SEARCH_CHIFFRECLEF["tool_description"],
-        meta=SEARCH_CHIFFRECLEF["tool_metadata"],
+        name=SEARCH_DOCUMENTS["tool_name"],
+        description=SEARCH_DOCUMENTS["tool_description"],
+        meta=SEARCH_DOCUMENTS["tool_metadata"],
     )
     @log_tool
     async def search_insee_documents(
-        params: SearchInseeChiffrecleInput,
+        params: SearchInseeDocumentsInput,
     ) -> SearchInseeDocumentsOutput:
         must, filters, should, must_not = build_text_clauses(
             query=params.query,
@@ -104,8 +109,8 @@ def register_search_insee_chiffreclef(mcp: FastMCP) -> None:
             filters,
             must_not_rapides=True,
             must_only_rapides=False,
-            chiffre_clef=True,
-            theme=None,
+            chiffre_clef=False,
+            theme=params.theme,
             geo_niveau=params.geo_niveau,
             geo_keyword=params.geo_keyword,
         )

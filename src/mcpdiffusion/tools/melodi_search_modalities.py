@@ -10,10 +10,10 @@ from elasticsearch import TransportError
 from fastmcp import FastMCP
 from pydantic import BaseModel, Field
 
-from helpers.es import INDEX_MELODI_COLUMNS, get_es_client
-from helpers.logging import log_tool
-from helpers.schemas import fail
-from tools.env import SEARCH_MODALITIES
+from ..helpers.es import INDEX_MELODI_COLUMNS, get_es_client
+from ..helpers.logging import log_tool
+from ..helpers.schemas import fail
+from .env import SEARCH_MODALITIES
 
 
 class SearchMelodiModalitiesInput(BaseModel):

@@ -14,8 +14,8 @@ from dotenv import load_dotenv
 from fastmcp import FastMCP
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
-from helpers.logging import MAIN_LOGGER_NAME, UVICORN_LOGGING_CONFIG
-from tools import register_tools
+from .helpers.logging import MAIN_LOGGER_NAME, UVICORN_LOGGING_CONFIG
+from .tools import register_tools
 
 
 load_dotenv()

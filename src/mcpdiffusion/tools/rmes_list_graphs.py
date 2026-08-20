@@ -10,8 +10,8 @@ from typing import Any, Optional
 from fastmcp import FastMCP
 from pydantic import BaseModel, Field
 
-from helpers.logging import log_tool
-from helpers.rmes import (
+from ..helpers.logging import log_tool
+from ..helpers.rmes import (
     CATEGORY_DEFS,
     GraphCategoryChoice,
     GraphRow,
@@ -22,7 +22,7 @@ from helpers.rmes import (
     _categorize,
     _get_raw_graph_rows,
 )
-from tools.env import RMES_LIST_GRAPHS
+from .env import RMES_LIST_GRAPHS
 
 
 # ---------------------------------------------------------------------------

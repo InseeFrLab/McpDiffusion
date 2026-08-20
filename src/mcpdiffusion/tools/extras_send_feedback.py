@@ -11,8 +11,8 @@ from pathlib import Path
 from fastmcp import FastMCP
 from pydantic import BaseModel, Field
 
-from helpers.logging import log_tool
-from tools.env import SEND_FEEDBACK
+from ..helpers.logging import log_tool
+from .env import SEND_FEEDBACK
 
 
 # ---------------------------------------------------------------------------

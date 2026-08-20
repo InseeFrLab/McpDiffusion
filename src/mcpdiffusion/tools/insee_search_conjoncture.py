@@ -14,15 +14,15 @@ from elasticsearch import TransportError
 from fastmcp import FastMCP
 from pydantic import BaseModel, Field
 
-from helpers.es_search import (
+from ..helpers.es_search import (
     DocumentHit,
     apply_collection_filters,
     build_text_clauses,
     execute_search,
 )
-from helpers.logging import log_tool
-from helpers.schemas import fail
-from tools.env import DICT_THEME_CONJ, SEARCH_CONJONCTURE
+from ..helpers.logging import log_tool
+from ..helpers.schemas import fail
+from .env import DICT_THEME_CONJ, SEARCH_CONJONCTURE
 
 
 class _ThemeConjoncture(StrEnum):

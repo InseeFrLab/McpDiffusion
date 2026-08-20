@@ -1,0 +1,105 @@
+"""Shared fixtures and helpers for all test files."""
+from __future__ import annotations
+
+import json
+from typing import Any
+
+import httpx
+import pytest
+from fastmcp import Client, FastMCP
+
+from mcpdiffusion.helpers import rmes as rmes_module
+from mcpdiffusion.tools.rmes_describe_resource import register_rmes_describe_resource
+from mcpdiffusion.tools.rmes_list_graphs import register_rmes_list_graphs
+from mcpdiffusion.tools.rmes_run_sparql import register_rmes_run_sparql
+
+
+# ---------------------------------------------------------------------------
+# Helpers: fake httpx responses
+# ---------------------------------------------------------------------------
+
+def _json_response(body: dict[str, Any], status: int = 200) -> httpx.Response:
+    return httpx.Response(
+        status_code=status,
+        content=json.dumps(body).encode(),
+        headers={"content-type": "application/sparql-results+json"},
+        request=httpx.Request("POST", rmes_module.ENDPOINT),
+    )
+
+
+def _text_response(text: str, status: int = 200) -> httpx.Response:
+    return httpx.Response(
+        status_code=status,
+        content=text.encode(),
+        headers={"content-type": "text/turtle"},
+        request=httpx.Request("POST", rmes_module.ENDPOINT),
+    )
+
+
+def _error_response(status: int, body: str = "Bad Request") -> httpx.Response:
+    return httpx.Response(
+        status_code=status,
+        content=body.encode(),
+        headers={"content-type": "text/plain"},
+        request=httpx.Request("POST", rmes_module.ENDPOINT),
+    )
+
+
+def _out(call_tool_result) -> dict[str, Any]:
+    """Extract the structured content dict from a FastMCP CallToolResult."""
+    return call_tool_result.structured_content
+
+
+# ---------------------------------------------------------------------------
+# Fake httpx.AsyncClient
+# ---------------------------------------------------------------------------
+
+class FakeAsyncClient:
+    """Drop-in replacement for httpx.AsyncClient used by rmes._get_client()."""
+
+    def __init__(self, handler):
+        self.handler = handler
+        self.is_closed = False
+
+    async def post(self, url, **kwargs):
+        resp = self.handler(url, **kwargs)
+        if resp.status_code >= 400:
+            resp.raise_for_status()
+        return resp
+
+
+# ---------------------------------------------------------------------------
+# Fixtures: RMES server & client
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def rmes_mcp() -> FastMCP:
+    """Return a FastMCP instance with only the three RMES tools registered."""
+    mcp = FastMCP("test-rmes")
+    register_rmes_list_graphs(mcp)
+    register_rmes_describe_resource(mcp)
+    register_rmes_run_sparql(mcp)
+    return mcp
+
+
+@pytest.fixture
+def rmes_client(rmes_mcp: FastMCP) -> Client:
+    """Return a FastMCP Client wired to the RMES-only server (in-process)."""
+    return Client(rmes_mcp)
+
+
+# ---------------------------------------------------------------------------
+# Fixture: mock SPARQL endpoint
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def mock_sparql(monkeypatch):
+    """Return a callable that sets up the fake SPARQL endpoint."""
+    rmes_module._GRAPH_CACHE["data"] = None
+    rmes_module._GRAPH_CACHE["ts"] = 0.0
+
+    def _setup(handler):
+        fake = FakeAsyncClient(handler)
+        monkeypatch.setattr(rmes_module, "_get_client", lambda: fake)
+
+    return _setup

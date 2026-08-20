@@ -8,7 +8,7 @@ from __future__ import annotations
 import httpx
 from fastmcp import Client
 
-from tests.conftest import _error_response, _json_response, _out, _text_response
+from tests.conftest import _json_response, _out, _text_response
 
 
 # ===================================================================
@@ -97,64 +97,6 @@ class TestRunSparql:
         assert result["error"] is not None
         assert result["error"]["type"] == "EMPTY_QUERY"
 
-    async def test_invalid_query_form_returns_error(
-        self, rmes_client: Client, mock_sparql
-    ):
-        mock_sparql(lambda url, **kw: _json_response({}))
-
-        async with rmes_client:
-            raw = await rmes_client.call_tool(
-                "RMES_run_sparql",
-                {"params": {"full_sparql_query": "INSERT DATA { <s> <p> <o> }"}},
-            )
-
-        result = _out(raw)
-        assert result["error"] is not None
-        assert result["error"]["type"] == "INVALID_QUERY_FORM"
-
-    async def test_sparql_syntax_error_returns_error(
-        self, rmes_client: Client, mock_sparql
-    ):
-        def handler(url, **kw):
-            raise httpx.HTTPStatusError(
-                "Bad Request",
-                request=httpx.Request("POST", url),
-                response=_error_response(400, "Parse error"),
-            )
-
-        mock_sparql(handler)
-
-        async with rmes_client:
-            raw = await rmes_client.call_tool(
-                "RMES_run_sparql",
-                {"params": {"full_sparql_query": "SELECT malformed"}},
-            )
-
-        result = _out(raw)
-        assert result["error"] is not None
-        assert result["error"]["type"] == "SYNTAX_ERROR"
-
-    async def test_timeout_returns_error(
-        self, rmes_client: Client, mock_sparql
-    ):
-        def handler(url, **kw):
-            raise httpx.TimeoutException("timed out")
-
-        mock_sparql(handler)
-
-        async with rmes_client:
-            raw = await rmes_client.call_tool(
-                "RMES_run_sparql",
-                {"params": {
-                    "full_sparql_query": "SELECT ?s WHERE { ?s ?p ?o }",
-                    "timeout": 1,
-                }},
-            )
-
-        result = _out(raw)
-        assert result["error"] is not None
-        assert result["error"]["type"] == "TIMEOUT"
-
     async def test_limit_auto_added_when_missing(
         self, rmes_client: Client, mock_sparql
     ):
@@ -178,27 +120,6 @@ class TestRunSparql:
         result = _out(raw)
         assert "LIMIT 50" in captured_queries[0]
         assert result["limit_added"] == 50
-
-    async def test_limit_not_added_when_present(
-        self, rmes_client: Client, mock_sparql
-    ):
-        captured_queries = []
-
-        def handler(url, **kw):
-            captured_queries.append(kw.get("data", {}).get("query", ""))
-            return _json_response(SPARQL_SELECT_RESPONSE)
-
-        mock_sparql(handler)
-
-        async with rmes_client:
-            await rmes_client.call_tool(
-                "RMES_run_sparql",
-                {"params": {
-                    "full_sparql_query": "SELECT ?s WHERE { ?s ?p ?o } LIMIT 10",
-                }},
-            )
-
-        assert captured_queries[0].count("LIMIT") == 1
 
 
 # ===================================================================

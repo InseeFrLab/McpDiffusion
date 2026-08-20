@@ -6,7 +6,7 @@ and the corresponding call below.
 """
 from __future__ import annotations
 
-from mcp.server.fastmcp import FastMCP
+from fastmcp import FastMCP
 
 from .melodi_get_observations import register_get_melodi_observations
 from .melodi_search_datasets import register_search_melodi_datasets
@@ -21,10 +21,10 @@ from .rmes_describe_resource import register_rmes_describe_resource
 from .rmes_run_sparql import register_rmes_run_sparql
 from .extras_send_feedback import register_extras_send_feedback
 
-def register_tools(mcp: FastMCP, toollist:str|None=None) -> None:
+def register_tools(mcp: FastMCP, toollist: str | None = None) -> None:
     """Register all MCP tools with the given FastMCP instance."""
     # INSEE.fr
-    if toollist==("insee"):
+    if toollist == ("insee"):
         register_search_insee_documents(mcp)
         register_get_insee_homepage(mcp)
         register_get_insee_document(mcp)
@@ -32,13 +32,13 @@ def register_tools(mcp: FastMCP, toollist:str|None=None) -> None:
         register_search_insee_chiffreclef(mcp)
 
     # Melodi
-    if toollist==("melodi"):
+    if toollist == ("melodi"):
         register_search_melodi_datasets(mcp)
         register_search_melodi_modalities(mcp)
         register_get_melodi_observations(mcp)
 
     # RMES (SPARQL)
-    if toollist==("rmes"):
+    if toollist == ("rmes"):
         register_rmes_list_graphs(mcp)
         register_rmes_describe_resource(mcp)
         register_rmes_run_sparql(mcp)

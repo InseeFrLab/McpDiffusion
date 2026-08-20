@@ -1,7 +1,7 @@
 """Unit tests for the three RMES tools (list_graphs, describe_resource, run_sparql).
 
 All HTTP calls to the real SPARQL endpoint are mocked via monkeypatch on
-`mcpdiffusion.helpers.rmes._get_client`, so these tests run offline.
+`mcpdiffusion.infra.sparql.get_sparql_client`, so these tests run offline.
 """
 from __future__ import annotations
 

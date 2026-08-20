@@ -8,11 +8,13 @@ import httpx
 import pytest
 from fastmcp import Client, FastMCP
 
-from mcpdiffusion.helpers import rmes as rmes_module
+from mcpdiffusion.config.settings import get_settings
+from mcpdiffusion.services import rmes as rmes_service
 from mcpdiffusion.tools.rmes_describe_resource import register_rmes_describe_resource
 from mcpdiffusion.tools.rmes_list_graphs import register_rmes_list_graphs
 from mcpdiffusion.tools.rmes_run_sparql import register_rmes_run_sparql
 
+_ENDPOINT = get_settings().rmes_endpoint
 
 # ---------------------------------------------------------------------------
 # Helpers: fake httpx responses
@@ -23,7 +25,7 @@ def _json_response(body: dict[str, Any], status: int = 200) -> httpx.Response:
         status_code=status,
         content=json.dumps(body).encode(),
         headers={"content-type": "application/sparql-results+json"},
-        request=httpx.Request("POST", rmes_module.ENDPOINT),
+        request=httpx.Request("POST", _ENDPOINT),
     )
 
 
@@ -32,7 +34,7 @@ def _text_response(text: str, status: int = 200) -> httpx.Response:
         status_code=status,
         content=text.encode(),
         headers={"content-type": "text/turtle"},
-        request=httpx.Request("POST", rmes_module.ENDPOINT),
+        request=httpx.Request("POST", _ENDPOINT),
     )
 
 
@@ -41,7 +43,7 @@ def _error_response(status: int, body: str = "Bad Request") -> httpx.Response:
         status_code=status,
         content=body.encode(),
         headers={"content-type": "text/plain"},
-        request=httpx.Request("POST", rmes_module.ENDPOINT),
+        request=httpx.Request("POST", _ENDPOINT),
     )
 
 
@@ -55,7 +57,7 @@ def _out(call_tool_result) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 class FakeAsyncClient:
-    """Drop-in replacement for httpx.AsyncClient used by rmes._get_client()."""
+    """Drop-in replacement for httpx.AsyncClient used by sparql.get_sparql_client()."""
 
     def __init__(self, handler):
         self.handler = handler
@@ -95,11 +97,11 @@ def rmes_client(rmes_mcp: FastMCP) -> Client:
 @pytest.fixture
 def mock_sparql(monkeypatch):
     """Return a callable that sets up the fake SPARQL endpoint."""
-    rmes_module._GRAPH_CACHE["data"] = None
-    rmes_module._GRAPH_CACHE["ts"] = 0.0
+    rmes_service._GRAPH_CACHE["data"] = None
+    rmes_service._GRAPH_CACHE["ts"] = 0.0
 
     def _setup(handler):
         fake = FakeAsyncClient(handler)
-        monkeypatch.setattr(rmes_module, "_get_client", lambda: fake)
+        monkeypatch.setattr(rmes_service, "get_sparql_client", lambda *a, **kw: fake)
 
     return _setup

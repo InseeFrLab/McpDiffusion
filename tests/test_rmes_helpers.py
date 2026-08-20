@@ -1,30 +1,27 @@
-"""Unit tests for mcpdiffusion.helpers.rmes (pure logic, no MCP layer)."""
+"""Unit tests for mcpdiffusion.services.rmes (pure logic, no MCP layer)."""
 from __future__ import annotations
 
-import json
 import time
-from typing import Any
 
 import httpx
 import pytest
 
-from mcpdiffusion.helpers.rmes import (
-    GRAPH_BASE,
-    SparqlErrorType,
+from mcpdiffusion.models.rmes import GRAPH_BASE, SparqlErrorType
+from mcpdiffusion.services import rmes as rmes_service
+from mcpdiffusion.services.rmes import (
     _CATEGORY_AUTRE,
+    _GRAPH_CACHE,
+    _GRAPH_CACHE_TTL,
     _accept_header,
     _categorize,
     _detect_query_form,
     _ensure_limit,
     _error_payload,
+    _execute_sparql,
     _get_raw_graph_rows,
     _relative_path,
-    _execute_sparql,
-    _GRAPH_CACHE,
-    _GRAPH_CACHE_TTL,
 )
 from tests.conftest import FakeAsyncClient, _json_response
-from mcpdiffusion.helpers import rmes as rmes_module
 
 
 # ===================================================================
@@ -219,10 +216,8 @@ class TestCategorize:
         assert cat.key == "autre"
 
     def test_specific_rules_take_precedence(self):
-        # "codes" exact → codes_concepts_generiques, not nomenclatures (prefix "codes/")
         cat = _categorize(f"{GRAPH_BASE}codes")
         assert cat.key == "codes_concepts_generiques"
-        # "codes/naf2025" → nomenclatures (prefix "codes/"), not codes_concepts_generiques
         cat = _categorize(f"{GRAPH_BASE}codes/naf2025")
         assert cat.key == "nomenclatures"
 
@@ -248,15 +243,15 @@ class TestErrorPayload:
 
 
 # ===================================================================
-# _execute_sparql (async, mocked HTTP)
+# _execute_sparql (async, mocked HTTP via DI)
 # ===================================================================
 
 @pytest.fixture
 def mock_http(monkeypatch):
-    """Patch _get_client to return a FakeAsyncClient."""
+    """Patch get_sparql_client where it is used (services.rmes namespace)."""
     def _setup(handler):
         fake = FakeAsyncClient(handler)
-        monkeypatch.setattr(rmes_module, "_get_client", lambda: fake)
+        monkeypatch.setattr(rmes_service, "get_sparql_client", lambda *a, **kw: fake)
     return _setup
 
 
@@ -269,7 +264,7 @@ class TestExecuteSparql:
 
         assert "error" in result
         assert result["error"]["type"] == SparqlErrorType.INVALID_QUERY_FORM
-        assert len(called) == 0  # no HTTP call made
+        assert len(called) == 0
 
     async def test_select_success(self, mock_http):
         body = {"head": {"vars": ["x"]}, "results": {"bindings": []}}
@@ -403,7 +398,7 @@ class TestGetRawGraphRows:
         result2 = await _get_raw_graph_rows()
 
         assert result1 == result2
-        assert len(call_count) == 1  # HTTP called only once
+        assert len(call_count) == 1
 
     async def test_cache_expires_after_ttl(self, mock_http, monkeypatch):
         body = {
@@ -423,7 +418,6 @@ class TestGetRawGraphRows:
         await _get_raw_graph_rows()
         assert len(call_count) == 1
 
-        # Simulate cache expiry
         _GRAPH_CACHE["ts"] = time.time() - _GRAPH_CACHE_TTL - 1
 
         await _get_raw_graph_rows()

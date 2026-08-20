@@ -1,89 +1,22 @@
-"""Tool: search_insee_documents
-
-Full-text search of INSEE publications (Insee Premiere, Insee Analyses,
-Dossiers, References, Chiffres-cles, ...) backed by the produit index.
-"""
+"""Tool: search_insee_chiffrecle -- thin registration layer."""
 from __future__ import annotations
-
-from enum import StrEnum
-from typing import Optional
 
 from elasticsearch import ConnectionError as ESConnectionError
 from elasticsearch import TransportError
 from fastmcp import FastMCP
-from pydantic import BaseModel, Field
 
-from ..helpers.es_search import (
-    DocumentHit,
+from ..config.tool_metadata import SEARCH_CHIFFRECLEF
+from ..core.errors import fail
+from ..core.logging import log_tool
+from ..models.insee import (
+    SearchInseeChiffrecleInput,
+    SearchInseeChiffrecleOutput,
+)
+from ..services.insee_search import (
     apply_collection_filters,
     build_text_clauses,
     execute_search,
 )
-from ..helpers.logging import log_tool
-from ..helpers.schemas import fail
-from .env import SEARCH_CHIFFRECLEF
-
-
-class _INSEETheme(StrEnum):
-    ALL = "ALL"
-    METHODES = "Methodes"
-    DEMOGRAPHIE = "Demographie"
-    REVENUS = "Revenus - Pouvoir d'achat - Consommation"
-    CONDITIONS = "Conditions de vie - Societe"
-    TRAVAIL = "Marche du travail - Salaires"
-    ECONOMIE = "Economie - Conjoncture - Comptes nationaux"
-    DD = "Developpement durable - Environnement"
-    ENTREPRISES = "Entreprises"
-    SECTEURS = "Secteurs d'activite"
-    TERRITOIRES = "Territoires, villes et quartiers"
-
-
-class _INSEEGeo(StrEnum):
-    COM = "COM"
-    DEP = "DEP"
-    REG = "REG"
-    INTER = "INTER"
-    COMPRD = "COMPRD"
-    FRANCE = "FRANCE"
-
-
-class SearchInseeChiffrecleInput(BaseModel):
-    query: str = Field(
-        description="Natural-language search query describing the statistics to retrieve.",
-        examples=["population de Lyon", "taux de chomage 2024", "PIB France"],
-    )
-
-    year_of_reference: Optional[int] = Field(
-        default=None,
-        description=(
-            "Hard filter on publication year (e.g. 2024). Leave null to "
-            "search all years."
-        ),
-    )
-
-    geo_niveau: _INSEEGeo = Field(
-        default=_INSEEGeo.FRANCE,
-        description="Geographic level to search. Codes: COM / DEP / REG / INTER / COMPRD / FRANCE.",
-    )
-    geo_keyword: Optional[str] = Field(
-        default=None,
-        description=(
-            "Geographic name to filter on (e.g. 'Paris', 'Occitanie', "
-            "'Bouches-du-Rhone'). Leave null to skip geographic filtering."
-        ),
-    )
-    number_of_results: int = Field(
-        default=10,
-        description="Maximum number of results to return.",
-        ge=1,
-        le=20,
-    )
-
-
-class SearchInseeDocumentsOutput(BaseModel):
-    results: list[DocumentHit]
-    count: int
-
 
 
 def register_search_insee_chiffreclef(mcp: FastMCP) -> None:
@@ -93,9 +26,9 @@ def register_search_insee_chiffreclef(mcp: FastMCP) -> None:
         meta=SEARCH_CHIFFRECLEF["tool_metadata"],
     )
     @log_tool
-    async def search_insee_documents(
+    async def search_insee_chiffrecle(
         params: SearchInseeChiffrecleInput,
-    ) -> SearchInseeDocumentsOutput:
+    ) -> SearchInseeChiffrecleOutput:
         must, filters, should, must_not = build_text_clauses(
             query=params.query,
             year_of_reference=params.year_of_reference,
@@ -125,4 +58,4 @@ def register_search_insee_chiffreclef(mcp: FastMCP) -> None:
                 retryable=True,
             )
             raise
-        return SearchInseeDocumentsOutput(results=hits, count=len(hits))
+        return SearchInseeChiffrecleOutput(results=hits, count=len(hits))

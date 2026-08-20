@@ -139,7 +139,7 @@ cp mcpdiffusion/.env.example mcpdiffusion/.env
 ### 3. Install dependencies
 
 ```bash
-pip install -r mcpdiffusion/requirements.txt
+uv sync
 ```
 
 ### 4. (Alternative) Build the Docker image

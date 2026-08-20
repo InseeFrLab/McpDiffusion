@@ -1,27 +1,20 @@
-"""
-Structured logging config + per-tool decorator.
-
-- `MAIN_LOGGER_NAME` (`mcp.main`) is the application root.
-- `TOOLS_LOGGER_NAME` (`mcp.tools`) is the tool-call stream.
-- `@log_tool` works for both sync and async tool functions and emits:
-    * entry (tool name + kwargs preview, secrets scrubbed)
-    * exit  (duration ms, result count when applicable)
-    * error (error code + short message)
-"""
+"""Structured logging config + per-tool decorator."""
 from __future__ import annotations
 
 import functools
 import inspect
 import logging
-import os
 import time
 from typing import Any, Callable, TypeVar
 
+from ..config.settings import get_settings
+
+_settings = get_settings()
 
 MAIN_LOGGER_NAME = "mcp.main"
 
 logging.basicConfig(
-    level=os.getenv("LOG_LEVEL", "INFO"),
+    level=_settings.log_level,
     format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
     force=True,
 )
@@ -41,7 +34,7 @@ UVICORN_LOGGING_CONFIG = {
         }
     },
     "root": {
-        "level": os.getenv("LOG_LEVEL", "INFO"),
+        "level": _settings.log_level,
         "handlers": ["default"],
     },
 }
@@ -52,14 +45,11 @@ logger = logging.getLogger(TOOLS_LOGGER_NAME)
 
 _F = TypeVar("_F", bound=Callable[..., Any])
 
-
-# Fields whose values we never want to log in plain text.
 _SCRUB_FIELDS = {"password", "mdp", "token", "secret", "auth", "api_key"}
 _KWARGS_PREVIEW_LIMIT = 800
 
 
 def _scrub(kwargs: dict) -> str:
-    """Return a bounded, redacted repr of kwargs suitable for logs."""
     safe = {}
     for k, v in kwargs.items():
         if any(s in k.lower() for s in _SCRUB_FIELDS):
@@ -73,7 +63,6 @@ def _scrub(kwargs: dict) -> str:
 
 
 def _result_count(result: Any) -> int | None:
-    """Best-effort count for result preview. None if unknown shape."""
     if result is None:
         return 0
     if isinstance(result, (list, tuple)):
@@ -83,7 +72,6 @@ def _result_count(result: Any) -> int | None:
             return len(result["results"])
         if "count" in result:
             return result["count"]
-    # Pydantic models with a .results attribute.
     r = getattr(result, "results", None)
     if isinstance(r, list):
         return len(r)
@@ -91,12 +79,7 @@ def _result_count(result: Any) -> int | None:
 
 
 def log_tool(func: _F) -> _F:
-    """Decorator that logs entry, exit (duration + count) and errors.
-
-    Supports both sync and async tool functions. The FastMCP tool registry
-    expects the decorated function to have the original signature; we
-    preserve it via `inspect.signature`.
-    """
+    """Decorator that logs entry, exit (duration + count) and errors."""
     is_async = inspect.iscoroutinefunction(func)
     name = func.__name__
 
@@ -143,6 +126,5 @@ def log_tool(func: _F) -> _F:
             return result
         wrapper = sync_wrapper
 
-    # Preserve the original signature for FastMCP introspection.
     wrapper.__signature__ = inspect.signature(func)  # type: ignore[attr-defined]
     return wrapper  # type: ignore[return-value]

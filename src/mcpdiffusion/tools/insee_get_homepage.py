@@ -1,38 +1,12 @@
-"""Tool: get_insee_homepage
-
-Return the curated set of INSEE key indicators (``DICT_KV`` from
-``tools.env``) instead of scraping the INSEE homepage.
-"""
+"""Tool: get_insee_homepage -- thin registration layer."""
 from __future__ import annotations
 
 from fastmcp import FastMCP
-from pydantic import BaseModel, Field
 
-from ..helpers.logging import log_tool
-from .env import DICT_KV, GET_HOMEPAGE
-
-
-class KeyValueIndicator(BaseModel):
-    """A single INSEE key indicator with its pre-computed textual value."""
-
-    key: str = Field(description="Indicator name (e.g. 'smic', 'PIB annuel').")
-    alias: str = Field(
-        default="",
-        description="Optional alias / alternative name for the indicator.",
-    )
-    value: str = Field(
-        description="Pre-computed textual description of the latest figure."
-    )
-
-
-class KeyIndicatorsOutput(BaseModel):
-    """The curated list of INSEE key indicators (replaces the homepage
-    scraping output)."""
-
-    indicators: list[KeyValueIndicator] = Field(
-        description="Curated key indicators: name, alias and latest value.",
-    )
-    count: int = Field(description="Number of indicators returned.")
+from ..config.tool_metadata import GET_HOMEPAGE
+from ..core.logging import log_tool
+from ..data.indicators import DICT_KV
+from ..models.insee import KeyIndicatorsOutput, KeyValueIndicator
 
 
 def register_get_insee_homepage(mcp: FastMCP) -> None:
@@ -50,7 +24,6 @@ def register_get_insee_homepage(mcp: FastMCP) -> None:
                 value=entry["valeur"].strip(),
             )
             for entry in DICT_KV
-            # Skip the placeholder/header row shipped in DICT_KV.
             if not (
                 entry["cle"].strip() == "clé"
                 and entry["alias"].strip() == "alias"

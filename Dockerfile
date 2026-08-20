@@ -31,4 +31,4 @@ EXPOSE 8000
 # running the image standalone.
 ENV ES_HOST="http://elasticsearch:9200"
 
-CMD ["uv", "run", "python", "-m", "mcpdiffusion.server"]
+CMD ["uv", "run", "--no-dev", "python", "-m", "mcpdiffusion.server"]

@@ -17,6 +17,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from .helpers.logging import MAIN_LOGGER_NAME, UVICORN_LOGGING_CONFIG
 from .tools import register_tools
 
+from mcpdiffusion.middleware import RateLimitMiddleware
 
 load_dotenv()
 
@@ -45,7 +46,7 @@ if _allowed_hosts == ["*"]:
         "Set ALLOWED_HOSTS before exposing the server publicly."
     )
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=_allowed_hosts)
-
+app.add_middleware(RateLimitMiddleware)
 
 if __name__ == "__main__":
     import uvicorn

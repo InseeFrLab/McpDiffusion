@@ -1,10 +1,11 @@
 """Tool: RMES_run_sparql -- thin registration layer."""
 from __future__ import annotations
 
-from fastmcp import FastMCP
+from fastmcp import Context, FastMCP
 
 from ..config.tool_metadata import RMES_RUN_SPARQL
 from ..core.logging import log_tool
+from ..infra.sparql import get_sparql_client
 from ..models.rmes import RunSparqlInput, RunSparqlOutput
 from ..services.rmes import KNOWN_VOCABULARIES_NOTE, run_sparql
 
@@ -28,5 +29,5 @@ def register_rmes_run_sparql(mcp: FastMCP) -> None:
         meta=RMES_RUN_SPARQL["tool_metadata"],
     )
     @log_tool
-    async def run_sparql_tool(params: RunSparqlInput) -> RunSparqlOutput:
-        return await run_sparql(params)
+    async def run_sparql_tool(params: RunSparqlInput, ctx: Context) -> RunSparqlOutput:
+        return await run_sparql(params, sparql_client=get_sparql_client(ctx))

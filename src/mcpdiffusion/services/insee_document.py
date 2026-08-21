@@ -9,9 +9,10 @@ from bs4 import BeautifulSoup
 from trafilatura import extract
 from trafilatura.settings import Extractor
 
+import httpx
+
 from ..config.settings import Settings, get_settings
 from ..core.errors import fail
-from ..infra.http import create_async_client
 from ..models.insee import (
     DocumentResult,
     GetInseeDocumentInput,
@@ -95,16 +96,12 @@ def _truncate(text: str, limit: int = _MAX_MARKDOWN_CHARS) -> tuple[str, bool]:
     return text[:head_size] + marker + text[-tail_size:], True
 
 
-async def _fetch_html(url: str, settings: Settings) -> str:
-    import httpx
+async def _fetch_html(url: str, settings: Settings, http_client: httpx.AsyncClient) -> str:
     full_url = settings.insee_base_url + url if not url.startswith(("http://", "https://")) else url
     try:
-        async with create_async_client(
-            settings=settings, follow_redirects=True,
-        ) as client:
-            response = await client.get(full_url)
-            response.raise_for_status()
-            return response.text
+        response = await http_client.get(full_url, follow_redirects=True)
+        response.raise_for_status()
+        return response.text
     except httpx.TimeoutException as exc:
         fail(
             "BACKEND_UNAVAILABLE",
@@ -138,6 +135,7 @@ async def _fetch_html(url: str, settings: Settings) -> str:
 async def get_insee_document(
     params: GetInseeDocumentInput,
     *,
+    http_client: httpx.AsyncClient,
     settings: Settings | None = None,
 ) -> GetInseeDocumentOutput:
     s = settings or get_settings()
@@ -152,7 +150,7 @@ async def get_insee_document(
     results: list[DocumentResult] = []
     for url in params.list_of_url:
         try:
-            html = await _fetch_html(str(url), s)
+            html = await _fetch_html(str(url), s, http_client)
             markdown = extract(html, options=_TRAFILATURA_OPTIONS) or ""
             if params.truncate_content:
                 markdown, truncated = _truncate(markdown)

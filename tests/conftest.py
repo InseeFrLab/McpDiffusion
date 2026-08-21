@@ -7,6 +7,7 @@ from typing import Any
 import httpx
 import pytest
 from fastmcp import Client, FastMCP
+from fastmcp.server.lifespan import lifespan
 
 from mcpdiffusion.config.settings import get_settings
 from mcpdiffusion.services import rmes as rmes_service
@@ -57,9 +58,9 @@ def _out(call_tool_result) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 class FakeAsyncClient:
-    """Drop-in replacement for httpx.AsyncClient used by sparql.get_sparql_client()."""
+    """Drop-in replacement for httpx.AsyncClient."""
 
-    def __init__(self, handler):
+    def __init__(self, handler=None):
         self.handler = handler
         self.is_closed = False
 
@@ -75,9 +76,21 @@ class FakeAsyncClient:
 # ---------------------------------------------------------------------------
 
 @pytest.fixture
-def rmes_mcp() -> FastMCP:
+def _fake_sparql_client():
+    """Shared FakeAsyncClient whose handler is set by mock_sparql."""
+    return FakeAsyncClient()
+
+
+@pytest.fixture
+def rmes_mcp(_fake_sparql_client) -> FastMCP:
     """Return a FastMCP instance with only the three RMES tools registered."""
-    mcp = FastMCP("test-rmes")
+    client = _fake_sparql_client
+
+    @lifespan
+    async def test_lifespan(server):
+        yield {"sparql_client": client}
+
+    mcp = FastMCP("test-rmes", lifespan=test_lifespan)
     register_rmes_list_graphs(mcp)
     register_rmes_describe_resource(mcp)
     register_rmes_run_sparql(mcp)
@@ -95,13 +108,12 @@ def rmes_client(rmes_mcp: FastMCP) -> Client:
 # ---------------------------------------------------------------------------
 
 @pytest.fixture
-def mock_sparql(monkeypatch):
+def mock_sparql(_fake_sparql_client):
     """Return a callable that sets up the fake SPARQL endpoint."""
     rmes_service._GRAPH_CACHE["data"] = None
     rmes_service._GRAPH_CACHE["ts"] = 0.0
 
     def _setup(handler):
-        fake = FakeAsyncClient(handler)
-        monkeypatch.setattr(rmes_service, "get_sparql_client", lambda *a, **kw: fake)
+        _fake_sparql_client.handler = handler
 
     return _setup

@@ -13,7 +13,6 @@ from typing import Any
 import httpx
 
 from ..config.settings import Settings, get_settings
-from ..infra.sparql import get_sparql_client
 from ..models.rmes import (
     GRAPH_BASE,
     MAX_ROW_LIMIT,
@@ -261,7 +260,7 @@ async def _execute_sparql(
     timeout: float,
     max_rows: int,
     *,
-    sparql_client_factory=None,
+    sparql_client: httpx.AsyncClient,
     settings: Settings | None = None,
 ) -> dict[str, Any]:
     s = settings or get_settings()
@@ -279,7 +278,7 @@ async def _execute_sparql(
     accept = _accept_header(query_form)
 
     try:
-        client = sparql_client_factory() if sparql_client_factory else get_sparql_client(s)
+        client = sparql_client
         response = await client.post(
             s.rmes_endpoint,
             data={"query": effective_query},
@@ -338,7 +337,7 @@ async def _execute_sparql(
 
 async def _get_raw_graph_rows(
     *,
-    sparql_client_factory=None,
+    sparql_client: httpx.AsyncClient,
     settings: Settings | None = None,
 ) -> dict[str, Any]:
     now = time.time()
@@ -349,7 +348,7 @@ async def _get_raw_graph_rows(
         )
         result = await _execute_sparql(
             query, timeout=45.0, max_rows=1000,
-            sparql_client_factory=sparql_client_factory, settings=settings,
+            sparql_client=sparql_client, settings=settings,
         )
         if "error" in result:
             return result
@@ -394,11 +393,11 @@ def _build_category_summary(rows: list[dict[str, Any]]) -> list[CategoryBucket]:
 async def list_graphs(
     params: ListGraphsInput,
     *,
-    sparql_client_factory=None,
+    sparql_client: httpx.AsyncClient,
     settings: Settings | None = None,
 ) -> ListGraphsOutput:
     raw = await _get_raw_graph_rows(
-        sparql_client_factory=sparql_client_factory, settings=settings,
+        sparql_client=sparql_client, settings=settings,
     )
     if "error" in raw:
         return ListGraphsOutput(
@@ -453,7 +452,7 @@ def _parse_bindings_to_properties(bindings: list[dict[str, Any]]) -> list[Resour
 async def describe_resource(
     params: DescribeResourceInput,
     *,
-    sparql_client_factory=None,
+    sparql_client: httpx.AsyncClient,
     settings: Settings | None = None,
 ) -> DescribeResourceOutput:
     graph_clause = f"<{params.graph}>" if params.graph else "?g"
@@ -473,7 +472,7 @@ async def describe_resource(
     from ..models.rmes import DEFAULT_TIMEOUT
     result = await _execute_sparql(
         query, timeout=DEFAULT_TIMEOUT, max_rows=MAX_ROW_LIMIT,
-        sparql_client_factory=sparql_client_factory, settings=settings,
+        sparql_client=sparql_client, settings=settings,
     )
 
     if "error" in result:
@@ -488,7 +487,7 @@ async def describe_resource(
 async def run_sparql(
     params: RunSparqlInput,
     *,
-    sparql_client_factory=None,
+    sparql_client: httpx.AsyncClient,
     settings: Settings | None = None,
 ) -> RunSparqlOutput:
     if not params.full_sparql_query or not params.full_sparql_query.strip():
@@ -503,7 +502,7 @@ async def run_sparql(
     max_rows = max(1, min(params.max_rows, MAX_ROW_LIMIT))
     result = await _execute_sparql(
         params.full_sparql_query, timeout=params.timeout, max_rows=max_rows,
-        sparql_client_factory=sparql_client_factory, settings=settings,
+        sparql_client=sparql_client, settings=settings,
     )
 
     if "error" in result:

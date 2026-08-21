@@ -16,14 +16,14 @@ from .config.settings import get_settings
 from .core.logging import MAIN_LOGGER_NAME, UVICORN_LOGGING_CONFIG
 from .core.middleware import RateLimitMiddleware
 from .tools import register_tools
-from .infra.elasticsearch import build_es_client
+from .infra.lifespan import app_lifespan
 
 load_dotenv()
 
 settings = get_settings()
 logger = logging.getLogger(MAIN_LOGGER_NAME)
 
-mcp = FastMCP("INSEE-mcp-diffusion", lifespan = build_es_client )
+mcp = FastMCP("INSEE-mcp-diffusion", lifespan=app_lifespan)
 
 register_tools(mcp, toollist=settings.toollist)
 

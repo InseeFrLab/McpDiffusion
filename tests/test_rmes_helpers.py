@@ -7,7 +7,6 @@ import httpx
 import pytest
 
 from mcpdiffusion.models.rmes import GRAPH_BASE, SparqlErrorType
-from mcpdiffusion.services import rmes as rmes_service
 from mcpdiffusion.services.rmes import (
     _CATEGORY_AUTRE,
     _GRAPH_CACHE,
@@ -246,98 +245,102 @@ class TestErrorPayload:
 # _execute_sparql (async, mocked HTTP via DI)
 # ===================================================================
 
-@pytest.fixture
-def mock_http(monkeypatch):
-    """Patch get_sparql_client where it is used (services.rmes namespace)."""
-    def _setup(handler):
-        fake = FakeAsyncClient(handler)
-        monkeypatch.setattr(rmes_service, "get_sparql_client", lambda *a, **kw: fake)
-    return _setup
-
-
 class TestExecuteSparql:
-    async def test_unknown_form_returns_error_without_http_call(self, mock_http):
+    async def test_unknown_form_returns_error_without_http_call(self):
         called = []
-        mock_http(lambda url, **kw: called.append(1) or _json_response({}))
+        fake = FakeAsyncClient(lambda url, **kw: called.append(1) or _json_response({}))
 
-        result = await _execute_sparql("INSERT DATA { <s> <p> <o> }", timeout=10, max_rows=100)
+        result = await _execute_sparql(
+            "INSERT DATA { <s> <p> <o> }", timeout=10, max_rows=100, sparql_client=fake,
+        )
 
         assert "error" in result
         assert result["error"]["type"] == SparqlErrorType.INVALID_QUERY_FORM
         assert len(called) == 0
 
-    async def test_select_success(self, mock_http):
+    async def test_select_success(self):
         body = {"head": {"vars": ["x"]}, "results": {"bindings": []}}
-        mock_http(lambda url, **kw: _json_response(body))
+        fake = FakeAsyncClient(lambda url, **kw: _json_response(body))
 
-        result = await _execute_sparql("SELECT ?x WHERE { ?x ?p ?o } LIMIT 1", timeout=10, max_rows=100)
+        result = await _execute_sparql(
+            "SELECT ?x WHERE { ?x ?p ?o } LIMIT 1", timeout=10, max_rows=100, sparql_client=fake,
+        )
 
         assert "error" not in result
         assert result["head"]["vars"] == ["x"]
 
-    async def test_select_without_limit_adds_meta(self, mock_http):
+    async def test_select_without_limit_adds_meta(self):
         body = {"head": {"vars": ["x"]}, "results": {"bindings": []}}
-        mock_http(lambda url, **kw: _json_response(body))
+        fake = FakeAsyncClient(lambda url, **kw: _json_response(body))
 
-        result = await _execute_sparql("SELECT ?x WHERE { ?x ?p ?o }", timeout=10, max_rows=50)
+        result = await _execute_sparql(
+            "SELECT ?x WHERE { ?x ?p ?o }", timeout=10, max_rows=50, sparql_client=fake,
+        )
 
         assert result["_meta"]["limit_added"] == 50
         assert "hint" in result["_meta"]
 
-    async def test_construct_returns_turtle(self, mock_http):
+    async def test_construct_returns_turtle(self):
         turtle = "<http://a> <http://b> <http://c> ."
-        mock_http(lambda url, **kw: httpx.Response(
+        fake = FakeAsyncClient(lambda url, **kw: httpx.Response(
             200, content=turtle.encode(), headers={"content-type": "text/turtle"},
             request=httpx.Request("POST", url),
         ))
 
         result = await _execute_sparql(
             "CONSTRUCT { ?s ?p ?o } WHERE { ?s ?p ?o } LIMIT 1", timeout=10, max_rows=100,
+            sparql_client=fake,
         )
 
         assert result["format"] == "turtle"
         assert result["data"] == turtle
 
-    async def test_timeout_returns_error(self, mock_http):
+    async def test_timeout_returns_error(self):
         def handler(url, **kw):
             raise httpx.TimeoutException("timed out")
 
-        mock_http(handler)
+        fake = FakeAsyncClient(handler)
 
-        result = await _execute_sparql("SELECT ?x WHERE { ?x ?p ?o }", timeout=5, max_rows=100)
+        result = await _execute_sparql(
+            "SELECT ?x WHERE { ?x ?p ?o }", timeout=5, max_rows=100, sparql_client=fake,
+        )
 
         assert result["error"]["type"] == SparqlErrorType.TIMEOUT
 
-    async def test_http_400_returns_syntax_error(self, mock_http):
+    async def test_http_400_returns_syntax_error(self):
         def handler(url, **kw):
             resp = httpx.Response(400, content=b"Parse error", request=httpx.Request("POST", url))
             raise httpx.HTTPStatusError("Bad Request", request=resp.request, response=resp)
 
-        mock_http(handler)
+        fake = FakeAsyncClient(handler)
 
-        result = await _execute_sparql("SELECT bad", timeout=10, max_rows=100)
+        result = await _execute_sparql("SELECT bad", timeout=10, max_rows=100, sparql_client=fake)
 
         assert result["error"]["type"] == SparqlErrorType.SYNTAX_ERROR
         assert "endpoint_message" in result["error"]
 
-    async def test_http_500_returns_http_error(self, mock_http):
+    async def test_http_500_returns_http_error(self):
         def handler(url, **kw):
             resp = httpx.Response(500, content=b"Internal error", request=httpx.Request("POST", url))
             raise httpx.HTTPStatusError("Server Error", request=resp.request, response=resp)
 
-        mock_http(handler)
+        fake = FakeAsyncClient(handler)
 
-        result = await _execute_sparql("SELECT ?x WHERE { ?x ?p ?o }", timeout=10, max_rows=100)
+        result = await _execute_sparql(
+            "SELECT ?x WHERE { ?x ?p ?o }", timeout=10, max_rows=100, sparql_client=fake,
+        )
 
         assert result["error"]["type"] == SparqlErrorType.HTTP_ERROR
 
-    async def test_network_error_returns_network_error(self, mock_http):
+    async def test_network_error_returns_network_error(self):
         def handler(url, **kw):
             raise httpx.ConnectError("connection refused")
 
-        mock_http(handler)
+        fake = FakeAsyncClient(handler)
 
-        result = await _execute_sparql("SELECT ?x WHERE { ?x ?p ?o }", timeout=10, max_rows=100)
+        result = await _execute_sparql(
+            "SELECT ?x WHERE { ?x ?p ?o }", timeout=10, max_rows=100, sparql_client=fake,
+        )
 
         assert result["error"]["type"] == SparqlErrorType.NETWORK_ERROR
 
@@ -353,33 +356,33 @@ class TestGetRawGraphRows:
         _GRAPH_CACHE["data"] = None
         _GRAPH_CACHE["ts"] = 0.0
 
-    async def test_returns_rows_on_success(self, mock_http):
+    async def test_returns_rows_on_success(self):
         body = {
             "head": {"vars": ["g", "nbTriples"]},
             "results": {"bindings": [
                 {"g": {"value": "http://rdf.insee.fr/graphes/codes/naf2025"}, "nbTriples": {"value": "100"}},
             ]},
         }
-        mock_http(lambda url, **kw: _json_response(body))
+        fake = FakeAsyncClient(lambda url, **kw: _json_response(body))
 
-        result = await _get_raw_graph_rows()
+        result = await _get_raw_graph_rows(sparql_client=fake)
 
         assert "rows" in result
         assert len(result["rows"]) == 1
         assert result["rows"][0]["graph"] == "http://rdf.insee.fr/graphes/codes/naf2025"
         assert result["rows"][0]["triples"] == 100
 
-    async def test_returns_error_on_failure(self, mock_http):
+    async def test_returns_error_on_failure(self):
         def handler(url, **kw):
             raise httpx.TimeoutException("timed out")
 
-        mock_http(handler)
+        fake = FakeAsyncClient(handler)
 
-        result = await _get_raw_graph_rows()
+        result = await _get_raw_graph_rows(sparql_client=fake)
 
         assert "error" in result
 
-    async def test_uses_cache_on_second_call(self, mock_http):
+    async def test_uses_cache_on_second_call(self):
         call_count = []
         body = {
             "head": {"vars": ["g", "nbTriples"]},
@@ -392,15 +395,15 @@ class TestGetRawGraphRows:
             call_count.append(1)
             return _json_response(body)
 
-        mock_http(handler)
+        fake = FakeAsyncClient(handler)
 
-        result1 = await _get_raw_graph_rows()
-        result2 = await _get_raw_graph_rows()
+        result1 = await _get_raw_graph_rows(sparql_client=fake)
+        result2 = await _get_raw_graph_rows(sparql_client=fake)
 
         assert result1 == result2
         assert len(call_count) == 1
 
-    async def test_cache_expires_after_ttl(self, mock_http, monkeypatch):
+    async def test_cache_expires_after_ttl(self):
         body = {
             "head": {"vars": ["g", "nbTriples"]},
             "results": {"bindings": [
@@ -413,12 +416,12 @@ class TestGetRawGraphRows:
             call_count.append(1)
             return _json_response(body)
 
-        mock_http(handler)
+        fake = FakeAsyncClient(handler)
 
-        await _get_raw_graph_rows()
+        await _get_raw_graph_rows(sparql_client=fake)
         assert len(call_count) == 1
 
         _GRAPH_CACHE["ts"] = time.time() - _GRAPH_CACHE_TTL - 1
 
-        await _get_raw_graph_rows()
+        await _get_raw_graph_rows(sparql_client=fake)
         assert len(call_count) == 2

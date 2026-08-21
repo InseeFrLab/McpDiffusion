@@ -8,7 +8,6 @@ from elasticsearch import ConnectionError as ESConnectionError
 from elasticsearch import TransportError, Elasticsearch
 from ..config.settings import Settings, get_settings
 from ..core.errors import fail
-from ..infra.http import create_async_client
 from ..models.melodi import (
     ColumnResult,
     DatasetSearchResult,
@@ -25,17 +24,17 @@ from ..models.melodi import (
 async def get_melodi_observations(
     params: GetMelodiObservationsInput,
     *,
+    http_client: httpx.AsyncClient,
     settings: Settings | None = None,
 ) -> GetMelodiObservationsOutput:
     s = settings or get_settings()
     url = f"{s.melodi_data_base_url}/{params.dataset_id}"
     try:
-        async with create_async_client(settings=s) as client:
-            response = await client.get(
-                url,
-                params=params.dict_of_columns_and_values or None,
-            )
-            response.raise_for_status()
+        response = await http_client.get(
+            url,
+            params=params.dict_of_columns_and_values or None,
+        )
+        response.raise_for_status()
     except httpx.TimeoutException as exc:
         fail(
             "BACKEND_UNAVAILABLE",

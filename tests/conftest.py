@@ -64,11 +64,17 @@ class FakeAsyncClient:
         self.handler = handler
         self.is_closed = False
 
-    async def post(self, url, **kwargs):
+    async def _request(self, url, **kwargs):
         resp = self.handler(url, **kwargs)
         if resp.status_code >= 400:
             resp.raise_for_status()
         return resp
+
+    async def get(self, url, **kwargs):
+        return await self._request(url, **kwargs)
+
+    async def post(self, url, **kwargs):
+        return await self._request(url, **kwargs)
 
 
 # ---------------------------------------------------------------------------

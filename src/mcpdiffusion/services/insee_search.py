@@ -24,6 +24,8 @@ def _coerce_hit_value(value) -> Optional[str]:
     return str(value)
 
 
+# Build query 
+
 def build_text_clauses(
     query: Optional[str],
     year_of_reference: Optional[int],
@@ -126,6 +128,7 @@ def apply_collection_filters(
 
     return filters, should
 
+# Execute search with built query 
 
 def execute_search(
     *,

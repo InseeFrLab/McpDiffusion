@@ -5,11 +5,9 @@ from typing import Any
 
 import httpx
 from elasticsearch import ConnectionError as ESConnectionError
-from elasticsearch import TransportError
-
+from elasticsearch import TransportError, Elasticsearch
 from ..config.settings import Settings, get_settings
 from ..core.errors import fail
-from ..infra.elasticsearch import get_es_client
 from ..infra.http import create_async_client
 from ..models.melodi import (
     ColumnResult,
@@ -116,9 +114,9 @@ async def search_melodi_datasets(
     params: SearchMelodiDatasetsInput,
     *,
     settings: Settings | None = None,
+    es: Elasticsearch,
 ) -> SearchMelodiDatasetsOutput:
     s = settings or get_settings()
-    es = get_es_client(s)
     filters: list[dict[str, Any]] = []
     if params.start_year:
         filters.append({
@@ -231,10 +229,9 @@ async def search_melodi_modalities(
     params: SearchMelodiModalitiesInput,
     *,
     settings: Settings | None = None,
+    es: Elasticsearch,
 ) -> SearchMelodiModalitiesOutput:
     s = settings or get_settings()
-    es = get_es_client(s)
-
     filters: list[dict[str, Any]] = [{"term": {"dataset_id": params.dataset_id}}]
     if params.columns_id:
         filters.append({"terms": {"code": params.columns_id}})

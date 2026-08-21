@@ -13,7 +13,6 @@ from elasticsearch.dsl import Q, Search
 from ..config.settings import Settings, get_settings
 from ..data.geography import DICT_GEO
 from ..data.themes import KEYS_THEME_NIV1
-from ..infra.elasticsearch import get_es_client
 from ..models.insee import DocumentHit
 
 
@@ -135,14 +134,12 @@ def execute_search(
     should: list,
     must_not: list,
     number_of_results: int,
-    client: Optional[Elasticsearch] = None,
+    es: Elasticsearch,
     settings: Settings | None = None,
 ) -> list[DocumentHit]:
     """Run the assembled bool query and return whitelisted DocumentHit records."""
     s = settings or get_settings()
-    client = client or get_es_client(s)
-
-    search = Search(using=client, index=s.es_index_produits).query(
+    search = Search(using=es, index=s.es_index_produits).query(
         Q(
             "function_score",
             query=Q(

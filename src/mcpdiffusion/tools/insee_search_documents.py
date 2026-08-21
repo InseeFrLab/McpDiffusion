@@ -3,11 +3,12 @@ from __future__ import annotations
 
 from elasticsearch import ConnectionError as ESConnectionError
 from elasticsearch import TransportError
-from fastmcp import FastMCP
+from fastmcp import Context, FastMCP
 
 from ..config.tool_metadata import SEARCH_DOCUMENTS
 from ..core.errors import fail
 from ..core.logging import log_tool
+from ..infra.elasticsearch import get_client_es
 from ..models.insee import (
     SearchInseeDocumentsInput,
     SearchInseeDocumentsOutput,
@@ -28,6 +29,7 @@ def register_search_insee_documents(mcp: FastMCP) -> None:
     @log_tool
     async def search_insee_documents(
         params: SearchInseeDocumentsInput,
+        ctx: Context,
     ) -> SearchInseeDocumentsOutput:
         must, filters, should, must_not = build_text_clauses(
             query=params.query,
@@ -49,6 +51,7 @@ def register_search_insee_documents(mcp: FastMCP) -> None:
                 should=should,
                 must_not=must_not,
                 number_of_results=params.number_of_results,
+                es=get_client_es(ctx),
             )
         except (ESConnectionError, TransportError) as exc:
             fail(

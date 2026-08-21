@@ -4,12 +4,13 @@ from __future__ import annotations
 from elasticsearch import ConnectionError as ESConnectionError
 from elasticsearch import TransportError
 from elasticsearch.dsl import Q
-from fastmcp import FastMCP
+from fastmcp import Context, FastMCP
 
 from ..config.tool_metadata import SEARCH_CONJONCTURE
 from ..core.errors import fail
 from ..core.logging import log_tool
 from ..data.themes import DICT_THEME_CONJ
+from ..infra.elasticsearch import get_client_es
 from ..models.insee import (
     SearchInseeConjonctureInput,
     SearchInseeConjonctureOutput,
@@ -30,6 +31,7 @@ def register_search_insee_conjoncture(mcp: FastMCP) -> None:
     @log_tool
     async def search_insee_conjoncture(
         params: SearchInseeConjonctureInput,
+        ctx: Context,
     ) -> SearchInseeConjonctureOutput:
         must, filters, should, must_not = build_text_clauses(
             query=params.query,
@@ -52,6 +54,7 @@ def register_search_insee_conjoncture(mcp: FastMCP) -> None:
                 should=should,
                 must_not=must_not,
                 number_of_results=params.number_of_results,
+                es=get_client_es(ctx),
             )
         except (ESConnectionError, TransportError) as exc:
             fail(

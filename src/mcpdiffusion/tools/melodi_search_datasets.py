@@ -1,10 +1,11 @@
 """Tool: search_melodi_datasets -- thin registration layer."""
 from __future__ import annotations
 
-from fastmcp import FastMCP
+from fastmcp import Context, FastMCP
 
 from ..config.tool_metadata import SEARCH_DATASET
 from ..core.logging import log_tool
+from ..infra.elasticsearch import get_client_es
 from ..models.melodi import SearchMelodiDatasetsInput, SearchMelodiDatasetsOutput
 from ..services.melodi import search_melodi_datasets
 
@@ -18,5 +19,6 @@ def register_search_melodi_datasets(mcp: FastMCP) -> None:
     @log_tool
     async def search_melodi_datasets_tool(
         params: SearchMelodiDatasetsInput,
+        ctx: Context,
     ) -> SearchMelodiDatasetsOutput:
-        return await search_melodi_datasets(params)
+        return await search_melodi_datasets(params, es=get_client_es(ctx))

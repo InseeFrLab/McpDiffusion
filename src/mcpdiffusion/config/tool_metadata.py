@@ -3,6 +3,8 @@
 Design notes:
 - Tool *names* are English snake_case; French is kept only where it is
   actual data (enum literals that hit the ES index, user-supplied queries).
+  Fixme: the current is computed only once at import time,
+    if the server is running for 3 weeks, the old date will still be in effect...
 - `CURRENT_DATE` is computed lazily so long-running servers always report
   today's date, not the day the process started.
 - Tool descriptions describe the *final* schemas; rewrite in lockstep
@@ -11,13 +13,22 @@ Design notes:
 from datetime import date
 
 
+# Fixme: I'd put such a generic function in a separate module
+#   just a preference, not mandatory
 def current_date_iso() -> str:
     """Return today's date as ISO-8601."""
     return date.today().isoformat()
 
 
+# Fixme: I feel like having the tools metadata separate / not-colocated with the tools might be a mistake
+# Fixme: I believe those metadata can live with the corresponding set of tool functions
+#  by leveraging FastMCP capabilities - descriptions could live in the functions' docstring
+# Fixme: I would also create one file per tool as a preference, but I get the argument
+#  of having a clear overview of tools at the same place
 # --- MELODI tools -----------------------------------------------------------
 
+# Fixme: if keeping those metadata separate, prefer multiline strings that read better
+#   and avoid missing spaces issues
 GET_DATASET = {
     "tool_name": "get_melodi_observations",
     "tool_description": (
@@ -149,6 +160,7 @@ GET_DOCUMENT = {
     "tool_metadata": {"version": "5.0", "author": "mirlon"},
 }
 
+# Fixme: Those docstrings are computed once at import time, therefore, the current date is never re-computed
 SEARCH_DOCUMENTS = {
     "tool_name": "search_insee_documents",
     "tool_description": (
@@ -206,14 +218,14 @@ SEARCH_DOCUMENTS = {
 SEARCH_CHIFFRECLEF = {
     "tool_name": "search_insee_chiffrecle",
     "tool_description": "Recherche EXCLUSIVE dans les Chiffres-clefs INSEE : donnees synthetiques, \n"
-    "comparaisons regionales/departementales et statistiques factuelles simples.\n"
-    "A utiliser EN PRIORITE pour : population, inflation, chomage, PIB, salaires, \n"
-    "prix par categorie, comparaisons geographiques (region, departement, commune).\n"
-    "A utiliser POUR LES CAS SIMPLES : 'Quelle est la population de X ?', 'Taux de chomage en 2024 ?', 'Inflation en juillet 2026 ?'\n"
-    "A NE PAS utiliser pour : analyses detaillees, impacts/contexte, tendances \n"
-    "complexes, donnees produit granulaires historiques (-> utiliser search_melodi_datasets \n"
-    "ou search_insee_documents selon le contexte).\n"
-    "Retourne directement les tableaux synthetiques prets a l'emploi.\n",
+                        "comparaisons regionales/departementales et statistiques factuelles simples.\n"
+                        "A utiliser EN PRIORITE pour : population, inflation, chomage, PIB, salaires, \n"
+                        "prix par categorie, comparaisons geographiques (region, departement, commune).\n"
+                        "A utiliser POUR LES CAS SIMPLES : 'Quelle est la population de X ?', 'Taux de chomage en 2024 ?', 'Inflation en juillet 2026 ?'\n"
+                        "A NE PAS utiliser pour : analyses detaillees, impacts/contexte, tendances \n"
+                        "complexes, donnees produit granulaires historiques (-> utiliser search_melodi_datasets \n"
+                        "ou search_insee_documents selon le contexte).\n"
+                        "Retourne directement les tableaux synthetiques prets a l'emploi.\n",
     "tool_metadata": {"version": "5.0", "author": "mirlon"},
 }
 

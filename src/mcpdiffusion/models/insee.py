@@ -7,6 +7,10 @@ from typing import Optional
 from pydantic import BaseModel, Field
 
 
+# Fixme: Pydantic BaseModel inheriting can be leverage to avoid duplication through model composition
+#  (FastAPI provides great examples on that)
+# Fixme: a lot of static data from this file seems derived from the one in the 'data' package
+#  this could be merged / refactored / better exploited
 class INSEETheme(StrEnum):
     ALL = "ALL"
     METHODES = "Methodes"
@@ -77,7 +81,7 @@ class DocumentHit(BaseModel):
 
 
 # --- search_insee_documents ---
-
+# Fixme: use model composition to avoid duplication
 class SearchInseeDocumentsInput(BaseModel):
     query: str = Field(
         description="Natural-language search query describing the statistics to retrieve.",
@@ -105,6 +109,8 @@ class SearchInseeDocumentsInput(BaseModel):
             "'Bouches-du-Rhone'). Leave null to skip geographic filtering."
         ),
     )
+    # Fixme: this field annotation is used multiple times and can be put in a variable to avoid duplication
+    # Fixme: magic values should be avoided
     number_of_results: int = Field(
         default=10,
         description="Maximum number of results to return.",
@@ -112,7 +118,7 @@ class SearchInseeDocumentsInput(BaseModel):
         le=20,
     )
 
-
+# Fixme: the same model shape is used 3 times
 class SearchInseeDocumentsOutput(BaseModel):
     results: list[DocumentHit]
     count: int

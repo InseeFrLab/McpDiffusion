@@ -13,6 +13,9 @@ from ..services.rmes import KNOWN_VOCABULARIES_NOTE, run_sparql
 def register_rmes_run_sparql(mcp: FastMCP) -> None:
     @mcp.tool(
         name=RMES_RUN_SPARQL["tool_name"],
+        # Fixme: this description combinaison involves too many sources of data, the metadata file,
+        #  the service plus a hardoded description
+        # Fixme: this is also not the right place for a query
         description=RMES_RUN_SPARQL["tool_description"] + "\n" + KNOWN_VOCABULARIES_NOTE + "\n\n"
         "Exemple -- recherche de codes NAF contenant \"extraction\" :\n"
         "PREFIX skos: <http://www.w3.org/2004/02/skos/core#>\n"

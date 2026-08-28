@@ -1,5 +1,8 @@
 """Curated INSEE key indicators (homepage data)."""
 
+# Fixme: I am wondering whether this really belongs in the source code or in a separate file or database
+# Fixme: The 1st entry seems like a header (contains no real data), is that normal?
+# Fixme: This seems like hardcoded, stale statistics... I don't know if this is normal
 DICT_KV = [
     {"cle": "clé", "alias": "alias", "valeur": "valeur"},
     {"cle": "estimation de population France", "alias": "", "valeur": "Au 1er janvier 2026, la population résidant en France est estimée à 69,1 millions d'habitants."},

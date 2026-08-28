@@ -27,6 +27,7 @@ async def get_melodi_observations(
     http_client: httpx.AsyncClient,
     settings: Settings | None = None,
 ) -> GetMelodiObservationsOutput:
+    # Fixme: same comment for settings, inject relevant properties only
     s = settings or get_settings()
     url = f"{s.melodi_data_base_url}/{params.dataset_id}"
     try:
@@ -35,6 +36,7 @@ async def get_melodi_observations(
             params=params.dict_of_columns_and_values or None,
         )
         response.raise_for_status()
+    # Fixme: the following problematic error handling pattern has already been adressed
     except httpx.TimeoutException as exc:
         fail(
             "BACKEND_UNAVAILABLE",
@@ -89,13 +91,18 @@ async def get_melodi_observations(
             "PARSE_ERROR",
             "Melodi API response did not contain an 'observations' list.",
         )
+        # Fixme: this not not an appropriate fix
+        #   this piece of code is unreachable since 'fail' raises already before
         raise  # pragma: no cover
 
     if params.list_of_year:
         years_str = {str(y) for y in params.list_of_year}
+        # Fixme: it seems we retrieve all the observations data and filter next
+        #   I wonder whether the API supports filtering
         observations = [
             obs
             for obs in observations
+            # Fixme: 'TIME_PERIOD' could be sanitized
             if (obs.get("dimensions", {})
                 .get("TIME_PERIOD", "")
                 .split("-")[0]) in years_str
@@ -108,6 +115,8 @@ async def get_melodi_observations(
         count=len(sliced),
     )
 
+# Fixme: I believe this is not the correct place (inside the service) to place a raw complex query
+#   the code might benefit having a repository layer to encapsulate data access
 
 async def search_melodi_datasets(
     params: SearchMelodiDatasetsInput,
@@ -209,6 +218,7 @@ async def search_melodi_datasets(
         description = source.get("metadata", {}).get("description")
         if isinstance(description, list) and description:
             description = description[0]
+        # Fixme: this branch does nothing
         elif isinstance(description, dict):
             description = description
         else:
@@ -236,6 +246,7 @@ async def search_melodi_modalities(
         filters.append({"terms": {"code": params.columns_id}})
 
     try:
+        # Fixme: the 1st es.search call was formatted differently, pick a single convention
         ds_column = es.search(
             index=s.es_index_melodi_columns,
             size=20,

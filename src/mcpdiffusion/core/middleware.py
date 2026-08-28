@@ -20,16 +20,26 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     (used by tests). Falls back to ``get_settings()`` when not provided.
     """
 
+    # Fixme: passing the whole settings object is inappropriate
+    #   Only relevant properties should be passed
+    #   It allows for better interface segregation
+    #   This would also avoid having this class creating the settings as a fallback
     def __init__(self, app, settings: Settings | None = None):
         super().__init__(app)
         self._settings = settings or get_settings()
         self._tz = ZoneInfo(self._settings.tz)
+        # Fixme: the storage behavior does not scale with multiple replicas
+        #   Consider implementing redis for handling state between multiple instances
         self._storage = storage.MemoryStorage()
         self._limiter = strategies.MovingWindowRateLimiter(self._storage)
         self._rate = parse(f"{self._settings.global_request_min}/minute")
 
+    # Fixme: there is no request path filtering on that dispatcher, meaning it runs also for non relevant path like /
+    #   or even health checks
     async def dispatch(self, request: Request, call_next):
         client_ip = request.client.host if request.client else "unknown"
+        # Fixme: if the key is the client ip, double check if anyone can alter it and bypass rate limiting...
+        # Fixme: also the usage of an fstring is useless here
         rate_key = f"{client_ip}"
 
         if not self._limiter.hit(self._rate, rate_key):
@@ -52,9 +62,11 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         response = await call_next(request)
 
+        # Fixme: the result of 'self._limiter.get_window_stats(self._rate, rate_key)' could have been cached
         remaining = self._limiter.get_window_stats(self._rate, rate_key)[1]
         response.headers["X-RateLimit-Limit"] = str(self._settings.global_request_min)
         response.headers["X-RateLimit-Remaining"] = str(remaining)
+        # Fixme: 60 is a magic number and should be set using a constant config
         response.headers["X-RateLimit-Window"] = f"{60}s"
 
         return response

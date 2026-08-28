@@ -12,6 +12,7 @@ from ..services.melodi import get_melodi_observations
 
 def register_get_melodi_observations(mcp: FastMCP) -> None:
     @mcp.tool(
+        # Fixme: 'GET_DATASET' as variable name is too broad, thus misleading
         name=GET_DATASET["tool_name"],
         description=GET_DATASET["tool_description"],
         meta=GET_DATASET["tool_metadata"],

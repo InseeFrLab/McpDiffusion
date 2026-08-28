@@ -21,4 +21,5 @@ def register_get_insee_document(mcp: FastMCP) -> None:
         params: GetInseeDocumentInput,
         ctx: Context,
     ) -> GetInseeDocumentOutput:
+        # Fixme: use singular or plural and stick to it
         return await get_insee_document(params, http_client=get_http_client(ctx))

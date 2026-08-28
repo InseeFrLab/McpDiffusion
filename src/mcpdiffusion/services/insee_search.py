@@ -25,7 +25,8 @@ def _coerce_hit_value(value) -> Optional[str]:
 
 
 # Build query 
-
+# Fixme: the type tuple[list, list, list, list] should be aliased for comprehension
+# Fixme: also prefer newer optional syntax
 def build_text_clauses(
     query: Optional[str],
     year_of_reference: Optional[int],
@@ -35,6 +36,7 @@ def build_text_clauses(
     must: list = []
     filters: list = []
     should: list = []
+    # Fixme: must_not is not used and returned as is, this is inappropriate
     must_not: list = []
 
     if query:
@@ -93,6 +95,7 @@ def apply_collection_filters(
     """Apply INSEE-specific filters. Returns updated (filters, should)."""
     should: list = []
 
+    # Fixme: The passed in 'filters' is mutated
     if must_only_rapides:
         filters.append(Q("term", collection_libelle="Informations rapides"))
     elif must_not_rapides:
@@ -100,7 +103,9 @@ def apply_collection_filters(
             Q("bool", must_not=[Q("term", collection_libelle="Informations rapides")])
         )
 
+    # Fixme: the 1st check seems useless
     if theme and theme != "ALL":
+        # Fixme: so if the caller sends an unregistered theme, we drop his filter anyway?
         id_theme = KEYS_THEME_NIV1.get(theme)
         if id_theme is not None:
             filters.append(Q("term", idthemeparent=id_theme))
@@ -111,6 +116,7 @@ def apply_collection_filters(
     if geo_niveau:
         key_geo = DICT_GEO.get(geo_niveau)
         if key_geo:
+            # Fixme: same as above
             filters.append(Q("term", geo_niveau=key_geo))
 
     if geo_keyword and geo_keyword.lower() != "all":
@@ -130,6 +136,7 @@ def apply_collection_filters(
 
 # Execute search with built query 
 
+# Fixme: inject only relevant settings parameters
 def execute_search(
     *,
     must: list,
@@ -141,6 +148,7 @@ def execute_search(
     settings: Settings | None = None,
 ) -> list[DocumentHit]:
     """Run the assembled bool query and return whitelisted DocumentHit records."""
+    # Fixme: such function should not init settings
     s = settings or get_settings()
     search = Search(using=es, index=s.es_index_produits).query(
         Q(
@@ -151,6 +159,8 @@ def execute_search(
                 filter=filters,
                 should=should,
                 must_not=must_not,
+                # Fixme: this seem counter counter intuitive, to require a minimum should match,
+                #  so it is not a should eventually?
                 minimum_should_match=1 if should else 0,
             ),
             boost_mode="sum",

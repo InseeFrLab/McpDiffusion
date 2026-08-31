@@ -25,7 +25,7 @@ logger = logging.getLogger(MAIN_LOGGER_NAME)
 
 mcp = FastMCP("INSEE-mcp-diffusion", lifespan=app_lifespan)
 
-register_tools(mcp, toollist=settings.toollist)
+register_tools(mcp, settings)
 
 app = mcp.http_app()
 

@@ -37,7 +37,10 @@ class Settings(BaseSettings):
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
 
     # Tool selection
-    toollist: Optional[str] = Field(default=None, alias="TOOLLIST")
+    enable_melodi : bool = Field(default=True, alias = "ENABLE_MELODI")
+    enable_inseefr : bool = Field(default=True, alias = "ENABLE_INSEEFR")
+    enable_rmes : bool = Field(default=True, alias = "ENABLE_RMES")
+
 
     # RMES / SPARQL
     rmes_endpoint: str = Field(

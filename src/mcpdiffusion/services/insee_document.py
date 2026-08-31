@@ -23,6 +23,7 @@ _TRAFILATURA_OPTIONS = Extractor(
     output_format="markdown",
     links=True,
     formatting=True,
+    # Fixme: this URL might belong in the settings
     source="insee.fr",
     with_metadata=True,
 )
@@ -34,7 +35,8 @@ def _as_relative(url: str) -> str:
     p = urlparse(url)
     return f"{p.path}?{p.query}" if p.query else p.path
 
-
+# Fixme: some complex composed types are involved multiple times - ex: list[dict[str, str]
+#   it might be better to leverage Pydantic and create meaningful type aliases - ex TableOfContentParams = list[dict[str, str]
 def _parse_sommaire(html: str, base_url: str) -> list[dict[str, str]]:
     soup = BeautifulSoup(html, "lxml")
     results: list[dict[str, str]] = []
@@ -87,8 +89,11 @@ def _format_sommaire(flat_items: list[dict[str, str]]) -> dict[str, dict[str, st
 def _truncate(text: str, limit: int = _MAX_MARKDOWN_CHARS) -> tuple[str, bool]:
     if len(text) <= limit:
         return text, False
+    # Fixme: avoid magic numbers popping here and there
     head_size = (limit * 2) // 3
+    # Fixme: what happens if limit is too small? 'tail_size' can go negative
     tail_size = limit - head_size - 200
+    # Fixme: prefer multiline strings which are more readable and easier to deal with
     marker = (
         "\n\n<!-- [CONTENT TRUNCATED: middle section omitted to keep the "
         "response compact for the model] -->\n\n"
@@ -96,12 +101,17 @@ def _truncate(text: str, limit: int = _MAX_MARKDOWN_CHARS) -> tuple[str, bool]:
     return text[:head_size] + marker + text[-tail_size:], True
 
 
+# Fixme: injecting the whole settings is bad separation of concerns
 async def _fetch_html(url: str, settings: Settings, http_client: httpx.AsyncClient) -> str:
     full_url = settings.insee_base_url + url if not url.startswith(("http://", "https://")) else url
     try:
         response = await http_client.get(full_url, follow_redirects=True)
         response.raise_for_status()
         return response.text
+    # Fixme: the error handling is not correctly designed, at a global scale
+    # Fixme: for example, here, the 'fail' invocation raises a ToolError nesting any information within a string
+    #   so an error is logged twice and the client ultimately receives an error string
+    #   he can hardly react on automatically
     except httpx.TimeoutException as exc:
         fail(
             "BACKEND_UNAVAILABLE",
@@ -132,12 +142,14 @@ async def _fetch_html(url: str, settings: Settings, http_client: httpx.AsyncClie
         raise
 
 
+# Fixme: here params obfuscates the meaning of the input argument
 async def get_insee_document(
     params: GetInseeDocumentInput,
     *,
     http_client: httpx.AsyncClient,
     settings: Settings | None = None,
 ) -> GetInseeDocumentOutput:
+    # Fixme: not the right place to init settings
     s = settings or get_settings()
 
     if not params.list_of_url:
@@ -148,6 +160,8 @@ async def get_insee_document(
         )
 
     results: list[DocumentResult] = []
+    # Fixme: there should be a cap in the number of URLs provided to avoid overloading the server
+    # Fixme: on top of that, the fetching is done sequentially, impacting the event loop
     for url in params.list_of_url:
         try:
             html = await _fetch_html(str(url), s, http_client)

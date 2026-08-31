@@ -19,7 +19,8 @@ from ..services.insee_search import (
     execute_search,
 )
 
-
+# Fixme: the orchestration present in that function belongs in a service
+#   Indeed, the approach from one tool to another is inconsistent
 def register_search_insee_chiffreclef(mcp: FastMCP) -> None:
     @mcp.tool(
         name=SEARCH_CHIFFRECLEF["tool_name"],
@@ -35,6 +36,8 @@ def register_search_insee_chiffreclef(mcp: FastMCP) -> None:
             query=params.query,
             year_of_reference=params.year_of_reference,
         )
+
+        # Fixme: should is overridden here
         filters, should = apply_collection_filters(
             filters,
             must_not_rapides=True,
@@ -60,5 +63,6 @@ def register_search_insee_chiffreclef(mcp: FastMCP) -> None:
                 "Verify ES_HOST and try again.",
                 retryable=True,
             )
+            # Fixme: we saw that the fail function did already raise
             raise
         return SearchInseeChiffrecleOutput(results=hits, count=len(hits))

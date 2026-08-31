@@ -31,6 +31,7 @@ from ..models.rmes import (
     ListGraphsInput,
 )
 
+# Fixme: follow a clear convention for logger names
 logger = logging.getLogger("mcp.rmes")
 
 # Cache for raw graph rows (expensive COUNT query)
@@ -60,9 +61,10 @@ avec ce tool.
 # Graph taxonomy
 # ---------------------------------------------------------------------------
 
+# Fixme: this is too broad of a type
 CategoryMatcher = Any  # Callable[[str], bool]
 
-
+# Fixme: you can use an immutable (frozen) dataclass instead - ex: annotate the class with '@dataclass(frozen=True)'
 class _CategoryRule:
     __slots__ = ("key", "label", "description", "match")
 
@@ -198,6 +200,7 @@ _CATEGORY_AUTRE = _CategoryRule(
     match=lambda path: True,
 )
 
+# Fixme: '_RULES_BY_KEY' uses '_ALL_RULES', but ultimately, '_RULES_BY_KEY' is never used
 _ALL_RULES = CATEGORY_DEFS + [_CATEGORY_AUTRE]
 _RULES_BY_KEY = {r.key: r for r in _ALL_RULES}
 
@@ -234,6 +237,8 @@ def _detect_query_form(query: str) -> str:
 def _ensure_limit(query: str, query_form: str, max_rows: int) -> tuple[str, bool]:
     if query_form not in ("SELECT", "CONSTRUCT"):
         return query, False
+    # Fixme: this is a particular case, but if there is inner queries with the word limit,
+    #  nothing prevents outer queries from not being bound
     if _LIMIT_RE.search(query):
         return query, False
     return query.rstrip().rstrip(";") + f"\nLIMIT {max_rows}", True
@@ -324,6 +329,8 @@ async def _execute_sparql(
     if accept == "text/turtle":
         return {"format": "turtle", "limit_added": limit_added, "data": response.text}
 
+    # Fixme: if the parsing of the response fails, it will lead to an unhandled exception
+    #  as this line of code is not wrapped within the try except block
     result = response.json()
     if limit_added:
         result.setdefault("_meta", {})["limit_added"] = max_rows
@@ -346,7 +353,12 @@ async def _get_raw_graph_rows(
             "SELECT ?g (COUNT(*) AS ?nbTriples) WHERE { GRAPH ?g { ?s ?p ?o } } "
             "GROUP BY ?g ORDER BY DESC(?nbTriples)"
         )
+        # Fixme: note that while this request runs (async nature),
+        #  other concurrent requests can still enter the current block
+        #  consider an asyncio.Lock + a second freshness check inside it,
+        #  otherwise each waiter just re-runs the same expensive query
         result = await _execute_sparql(
+            # Fixme: those magic values belong in the settings
             query, timeout=45.0, max_rows=1000,
             sparql_client=sparql_client, settings=settings,
         )
@@ -425,6 +437,7 @@ async def list_graphs(
             bucket_rows = [
                 GraphRow(graph=g, triples=t)
                 for g, t in rows_by_graph.items()
+                # Fixme: I though '_build_category_summary' already categorized every row
                 if _categorize(g).key == bucket.category
             ]
             bucket_rows.sort(key=lambda r: r.triples, reverse=True)
@@ -457,6 +470,8 @@ async def describe_resource(
 ) -> DescribeResourceOutput:
     graph_clause = f"<{params.graph}>" if params.graph else "?g"
     graph_values = f"VALUES ?g {{ <{params.graph}> }}" if params.graph else ""
+    # Fixme: the query is built using string interpolation
+    #   just check whether injection can cause problems here
     query = f"""
     SELECT ?g ?direction ?p ?o WHERE {{
       {graph_values}
@@ -469,6 +484,7 @@ async def describe_resource(
       }}
     }} LIMIT {MAX_ROW_LIMIT}
     """
+    # Fixme: put the import at the top
     from ..models.rmes import DEFAULT_TIMEOUT
     result = await _execute_sparql(
         query, timeout=DEFAULT_TIMEOUT, max_rows=MAX_ROW_LIMIT,

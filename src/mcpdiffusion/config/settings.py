@@ -1,8 +1,7 @@
 """Centralized application settings validated at import time via Pydantic."""
-from __future__ import annotations
 
-import os
 from functools import lru_cache
+# Fixme: prefer more recent syntax - ex: str | None instead of Optional
 from typing import Optional
 
 from pydantic import Field
@@ -11,6 +10,7 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     # Elasticsearch
+    # Fixme: if the environment variable name matches the variable name, there is no need for an alias
     es_host: Optional[str] = Field(default=None, alias="ES_HOST")
     es_index_produits: str = Field(default="produit", alias="ES_INDEX_PRODUITS")
     es_index_melodi_datasets: str = Field(
@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     mcp_host: str = Field(default="0.0.0.0", alias="MCP_HOST")
     mcp_port: int = Field(default=8000, alias="MCP_PORT")
     allowed_hosts: str = Field(default="*", alias="ALLOWED_HOSTS")
+    # Fixme: some variables are missing from the '.env.example' file
     forwarded_allow_ips: str = Field(default="*", alias="FORWARDED_ALLOW_IPS")
 
     # Rate limiting
@@ -57,6 +58,10 @@ class Settings(BaseSettings):
         default="https://www.insee.fr", alias="INSEE_BASE_URL"
     )
 
+    # Fixme: this is just a preference for reading but multiline objects reads better
+    #   I also think 'populate_by_name' can be ignored if we get rid of aliases
+    #   Eventually 'SettingsConfigDict' is better for config than a plain dict since it catches typo'd key
+    #   Beware .env file resolves relative to the current working directory
     model_config = {"env_file": ".env", "extra": "ignore", "populate_by_name": True}
 
 

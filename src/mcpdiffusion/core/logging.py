@@ -1,5 +1,4 @@
 """Structured logging config + per-tool decorator."""
-from __future__ import annotations
 
 import functools
 import inspect
@@ -11,14 +10,22 @@ from ..config.settings import get_settings
 
 _settings = get_settings()
 
+# Fixme: this is a trade-off to make log fall under the same logger name, I would not recommend it
+#   a convention is to use the module name for identification
 MAIN_LOGGER_NAME = "mcp.main"
 
 logging.basicConfig(
     level=_settings.log_level,
+    # Fixme: the following format string is duplicated
     format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
     force=True,
 )
 
+# Fixme: 'UVICORN_LOGGING_CONFIG' is leveraged in the server.py main block
+#   but this block is not always ran, especially when the app is launched using uvicorn
+#   this prevents the log level set from being applied to uvicorn logs
+#   I'd suggest unifying config in a single place to invoke it systematically
+#   Also, this config competes with the one above
 UVICORN_LOGGING_CONFIG = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -49,6 +56,7 @@ _SCRUB_FIELDS = {"password", "mdp", "token", "secret", "auth", "api_key"}
 _KWARGS_PREVIEW_LIMIT = 800
 
 
+# Fixme: only single level items are scrubbed
 def _scrub(kwargs: dict) -> str:
     safe = {}
     for k, v in kwargs.items():
@@ -86,6 +94,8 @@ def log_tool(func: _F) -> _F:
     def _log_exit(duration_ms: float, result: Any) -> None:
         count = _result_count(result)
         if count is None:
+            # Fixme: prefer using the extra key to provide additional elements to log instead of information
+            #   concatenated in a textual prose
             logger.info("Tool exit: %s | %.1fms", name, duration_ms)
         else:
             logger.info(
@@ -93,12 +103,15 @@ def log_tool(func: _F) -> _F:
             )
 
     def _log_error(duration_ms: float, exc: BaseException) -> None:
+        # Fixme: the exception encapsulated within 'exc' is not leveraged fully,
+        #  the stack is missing which is critical information to log
         code = getattr(exc, "args", ("",))[0] if exc.args else type(exc).__name__
         logger.error(
             "Tool error: %s | %.1fms | %s: %s",
             name, duration_ms, type(exc).__name__, str(code)[:200],
         )
 
+    # Fixme: this code can be simplified, especially when only a few lines differ per outcome
     if is_async:
         @functools.wraps(func)
         async def async_wrapper(*args, **kwargs):
@@ -106,6 +119,8 @@ def log_tool(func: _F) -> _F:
             start = time.perf_counter()
             try:
                 result = await func(*args, **kwargs)
+            # Fixme: this is very broad exception handling
+            #   Indeed, this also catches KeyboardInterrupt, SystemExit, and asyncio.CancelledError
             except BaseException as exc:
                 _log_error((time.perf_counter() - start) * 1000, exc)
                 raise

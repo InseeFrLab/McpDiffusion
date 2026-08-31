@@ -25,6 +25,8 @@ class SendFeedbackInput(BaseModel):
 
 
 class SendFeedbackOutput(BaseModel):
+    # Fixme: prefer a Literal
     status: str = "success"
     message: str
+    # Fixme: why not use a datetime object?
     timestamp: str

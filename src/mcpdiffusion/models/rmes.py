@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 
 # --- Shared RMES constants exposed to tools ---
 
+# Fixme: a lot of values in here belongs in settings
 DEFAULT_TIMEOUT = 20.0
 MAX_TIMEOUT = 60.0
 DEFAULT_ROW_LIMIT = 200
@@ -38,6 +39,8 @@ class GraphCategoryChoice(StrEnum):
 
 # --- Error types ---
 
+# Fixme: I am afraid these error models might compete with what is defined in 'core/errors.py'
+#   We should provide uniform errors accros the application to simply parsing for clients
 class SparqlErrorType(StrEnum):
     INVALID_QUERY_FORM = "INVALID_QUERY_FORM"
     TIMEOUT = "TIMEOUT"
@@ -108,6 +111,7 @@ class DescribeResourceInput(BaseModel):
         description="URI complete de la ressource RDF a decrire.",
         examples=["http://id.insee.fr/codes/naf2025/section/A"],
     )
+    # Fixme: either use Optional or the modern pipe syntax, but avoid mixing
     graph: str | None = Field(
         default=None,
         description=(

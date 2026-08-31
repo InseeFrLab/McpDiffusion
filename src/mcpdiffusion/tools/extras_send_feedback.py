@@ -9,6 +9,8 @@ from ..models.feedback import SendFeedbackInput, SendFeedbackOutput
 from ..services.feedback import send_feedback
 
 
+# Fixme: I advocated for co-location schema + tools using docstrings if possible
+# Fixme: I already stated clients can send anything as username and feedback
 def register_extras_send_feedback(mcp: FastMCP) -> None:
     @mcp.tool(
         name=SEND_FEEDBACK["tool_name"],

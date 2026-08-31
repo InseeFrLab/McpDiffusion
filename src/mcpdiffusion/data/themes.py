@@ -1,5 +1,8 @@
 """INSEE theme mappings and conjoncture sub-themes."""
 
+# Fixme: Is that the right place for this kind of data? In the source code?
+#  Maybe a JSON file or a database is a better place
+# Fixme: This seems like mapping themes to IDs manually, this is fragile if so...
 KEYS_THEME_NIV1 = {
     "Demographie": 0,
     "Conditions de vie - Societe": 6,

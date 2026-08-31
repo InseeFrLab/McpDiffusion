@@ -21,7 +21,7 @@ from ..services.insee_search import (
     execute_search,
 )
 
-
+# Fixme: again, a lot of code in that tool that should belong in the service
 def register_search_insee_conjoncture(mcp: FastMCP) -> None:
     @mcp.tool(
         name=SEARCH_CONJONCTURE["tool_name"],
@@ -37,13 +37,17 @@ def register_search_insee_conjoncture(mcp: FastMCP) -> None:
             query=params.query,
             year_of_reference=params.year_of_reference,
         )
+        # Fixme: should is overridden
         filters, should = apply_collection_filters(
             filters,
+            # Fixme: the following allows for creating confusing combinaison
             must_not_rapides=False,
             must_only_rapides=True,
         )
         if params.theme_conjoncture:
             subthemes = DICT_THEME_CONJ.get(params.theme_conjoncture)
+            # Fixme: I don't know if this is the wanted behavior, but a subtheme miss will discard filtering,
+            #  so return everything?
             if subthemes:
                 filters.append(Q("terms", conjoncture_libelle=subthemes))
 
@@ -63,5 +67,6 @@ def register_search_insee_conjoncture(mcp: FastMCP) -> None:
                 "Verify ES_HOST and try again.",
                 retryable=True,
             )
+            # Fixme: as stated, this raise is dead
             raise
         return SearchInseeConjonctureOutput(results=hits, count=len(hits))

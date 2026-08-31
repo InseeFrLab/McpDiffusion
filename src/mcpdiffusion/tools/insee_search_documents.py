@@ -19,7 +19,8 @@ from ..services.insee_search import (
     execute_search,
 )
 
-
+# Fixme: state clear conventions between what goes to a tool and what do not
+#   most of the code might belong in the service
 def register_search_insee_documents(mcp: FastMCP) -> None:
     @mcp.tool(
         name=SEARCH_DOCUMENTS["tool_name"],
@@ -35,6 +36,7 @@ def register_search_insee_documents(mcp: FastMCP) -> None:
             query=params.query,
             year_of_reference=params.year_of_reference,
         )
+        # Fixme: should is overridden
         filters, should = apply_collection_filters(
             filters,
             must_not_rapides=True,
@@ -60,5 +62,6 @@ def register_search_insee_documents(mcp: FastMCP) -> None:
                 "Verify ES_HOST and try again.",
                 retryable=True,
             )
+            # Fixme: dead raise
             raise
         return SearchInseeDocumentsOutput(results=hits, count=len(hits))

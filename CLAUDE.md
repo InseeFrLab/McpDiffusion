@@ -95,6 +95,9 @@ docker compose -f docker-compose-dev.yaml up  # server + MCP Inspector (needs th
 - Do not touch `k8s/` or `.github/workflows/` unless the task is about deployment.
 - Do not fix a `# Fixme:` by deleting the comment without changing the code. If the comment turns out to be
   wrong or irrelevant, say so and ask before removing it.
+- **Two markers, two meanings.** `# Fixme:` is ours to fix. `# Business rule:` marks a question only whoever
+  owns the search and data semantics can answer — preserve the current behaviour, flag it, and never decide
+  it yourself. Reclassifying one as the other needs my agreement.
 - **Do not rely on the existing tests.** They were auto-generated and never reviewed. Verify your own work
   (see below).
 - There is no linter, formatter or type checker configured. Do not assume a command exists; propose one first.

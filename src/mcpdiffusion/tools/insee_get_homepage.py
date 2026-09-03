@@ -4,7 +4,6 @@ from __future__ import annotations
 from fastmcp import FastMCP
 
 from ..config.tool_metadata import GET_HOMEPAGE
-from ..core.logging import log_tool
 from ..data.indicators import DICT_KV
 from ..models.insee import KeyIndicatorsOutput, KeyValueIndicator
 
@@ -17,7 +16,6 @@ def register_get_insee_homepage(mcp: FastMCP) -> None:
         meta=GET_HOMEPAGE["tool_metadata"],
     )
     # Fixme: this is an async function with nothing to await
-    @log_tool
     async def get_insee_homepage() -> KeyIndicatorsOutput:
         indicators = [
             KeyValueIndicator(

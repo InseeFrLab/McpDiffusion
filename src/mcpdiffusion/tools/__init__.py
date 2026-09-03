@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from fastmcp import FastMCP
 
+from ..config.settings import Settings
+
 from .melodi_get_observations import register_get_melodi_observations
 from .melodi_search_datasets import register_search_melodi_datasets
 from .melodi_search_modalities import register_search_melodi_modalities
@@ -21,25 +23,22 @@ from .rmes_describe_resource import register_rmes_describe_resource
 from .rmes_run_sparql import register_rmes_run_sparql
 from .extras_send_feedback import register_extras_send_feedback
 
-
-def register_tools(mcp: FastMCP,  settings ) -> None:
-    """Register all MCP tools with the given FastMCP instance."""
-    # INSEE.fr
-    if settings.enable_inseefr :
-        register_search_insee_documents(mcp)
+# Fixme: there might be better pattern instead of iterating with if statements on tool groups
+def register_tools(mcp: FastMCP, settings: Settings) -> None:
+    """Register the enabled tools, handing each the settings it needs."""
+    if settings.enable_inseefr_tools:
+        register_search_insee_documents(mcp, index=settings.es_index_produits)
         register_get_insee_homepage(mcp)
         register_get_insee_document(mcp)
-        register_search_insee_conjoncture(mcp)
-        register_search_insee_chiffreclef(mcp)
+        register_search_insee_conjoncture(mcp, index=settings.es_index_produits)
+        register_search_insee_chiffreclef(mcp, index=settings.es_index_produits)
 
-    # Melodi
-    if settings.enable_melodi :
-        register_search_melodi_datasets(mcp)
-        register_search_melodi_modalities(mcp)
+    if settings.enable_melodi_tools:
+        register_search_melodi_datasets(mcp, index=settings.es_index_melodi_datasets)
+        register_search_melodi_modalities(mcp, index=settings.es_index_melodi_columns)
         register_get_melodi_observations(mcp)
 
-    # RMES (SPARQL)
-    if settings.enable_rmes:
-        register_rmes_list_graphs(mcp)
-        register_rmes_describe_resource(mcp)
-        register_rmes_run_sparql(mcp)
+    if settings.enable_rmes_tools:
+        register_rmes_list_graphs(mcp, endpoint=settings.rmes_endpoint)
+        register_rmes_describe_resource(mcp, endpoint=settings.rmes_endpoint)
+        register_rmes_run_sparql(mcp, endpoint=settings.rmes_endpoint)

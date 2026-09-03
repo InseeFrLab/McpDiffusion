@@ -1,75 +1,87 @@
-"""Combined application lifespan: creates and tears down shared clients."""
-from __future__ import annotations
+"""Shared clients, created once at startup and torn down on shutdown."""
 
 import logging
+from collections.abc import AsyncIterator, Callable
+from typing import Any
 
-import httpx
-from elasticsearch import Elasticsearch
+from elasticsearch import AsyncElasticsearch
+from httpx import AsyncClient, Timeout
 from fastmcp.server.lifespan import lifespan
 
-from ..config.settings import get_settings
+logger = logging.getLogger(__name__)
 
-# Fixme: was there not a reference for that logger name in 'config/logging.py'?
-logger = logging.getLogger("mcp.main")
-
-_HTTP_USER_AGENT = (
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
-    "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+# insee.fr serves different markup to unknown agents, so the scraper has to look like a browser.
+INSEE_USER_AGENT = (
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
 )
-_HTTP_TIMEOUT = httpx.Timeout(30.0, connect=10.0)
-_SPARQL_USER_AGENT = "MCP-RMeS/2.0"
+# The APIs have no such requirement, so they get an honest identity.
+MELODI_USER_AGENT = "McpDiffusion/0.1"
+SPARQL_USER_AGENT = "MCP-RMeS/2.0"
 
-# Fixme: One issue I see with that pattern is that if some client instantiation fail,
-#   the error is ignored and this can be tricky to identify
-# Fixme: Also, i see no client is properly tested upon creation (simple ping).
-#   It could help identify issues at startup: but this is not mandatory
-# Fixme: this piece of code contains too many magic values that belong in settings
-# Fixme: server is unused, if required by FastMCP, prefer prefixing it with an underscore
-@lifespan
-async def app_lifespan(server):
-    # Fixme: I am questioning whether this should be the responsibility of that function to instantiate settings
-    s = get_settings()
+ES_MAX_RETRIES = 2
 
-    # Elasticsearch
-    # Fixme: in 'config/settings.py', 'es_host' is deemed optional, so it must be made mandatory if required here
-    if not s.es_host:
-        raise RuntimeError("ES_HOST is not set. See .env.example.")
 
-    # Fixme: if this synchronous client is used within async coroutines,
-    #  it will block the event loop for the duration of the query
-    #   This is a major issue
-    es_client = Elasticsearch(
-        s.es_host,
-        verify_certs=s.tls_verify,
-        request_timeout=30,
-        max_retries=2,
-        retry_on_timeout=True,
-    )
-    logger.info("Elasticsearch client initialized for %s", s.es_host)
+def build_lifespan(
+    *,
+    es_host: str,
+    es_tls_verify: bool,
+    es_request_timeout_seconds: int,
+    insee_base_url: str,
+    insee_request_timeout_seconds: int,
+    insee_connect_timeout_seconds: int,
+    melodi_data_base_url: str,
+    melodi_request_timeout_seconds: int,
+    melodi_connect_timeout_seconds: int,
+) -> Callable[..., Any]:
 
-    # HTTP client (insee.fr, melodi API)
-    http_client = httpx.AsyncClient(
-        verify=s.tls_verify,
-        headers={"User-Agent": _HTTP_USER_AGENT},
-        timeout=_HTTP_TIMEOUT,
-    )
-    logger.info("HTTP client initialized")
+    @lifespan
+    async def app_lifespan(_server: Any) -> AsyncIterator[dict[str, Any]]:
+        elasticsearch_client = AsyncElasticsearch(
+            es_host,
+            verify_certs=es_tls_verify,
+            request_timeout=es_request_timeout_seconds,
+            max_retries=ES_MAX_RETRIES,
+            retry_on_timeout=True,
+        )
+        logger.info("Elasticsearch client initialized for %s", es_host)
 
-    # SPARQL client
-    # Fixme: TLS is ignored in some clients which seems inconsistent
-    sparql_client = httpx.AsyncClient(
-        headers={"User-Agent": _SPARQL_USER_AGENT},
-    )
-    logger.info("SPARQL client initialized")
+        insee_http_client = AsyncClient(
+            base_url=insee_base_url,
+            headers={"User-Agent": INSEE_USER_AGENT},
+            timeout=Timeout(
+                insee_request_timeout_seconds,
+                connect=insee_connect_timeout_seconds,
+            ),
+        )
+        logger.info("insee.fr client initialized for %s", insee_base_url)
 
-    yield {
-        "es_client": es_client,
-        "http_client": http_client,
-        "sparql_client": sparql_client,
-    }
+        melodi_http_client = AsyncClient(
+            base_url=melodi_data_base_url,
+            headers={"User-Agent": MELODI_USER_AGENT},
+            timeout=Timeout(
+                melodi_request_timeout_seconds,
+                connect=melodi_connect_timeout_seconds,
+            ),
+        )
+        logger.info("MELODI client initialized for %s", melodi_data_base_url)
 
-    # Fixme: the instantiated elastic client is synchronous, so cannot be prepended by the 'await' keyword
-    #   this would app to raise and crash on shutdown
-    await es_client.close()
-    await http_client.aclose()
-    await sparql_client.aclose()
+        # RMES passes its own timeout per query, so this client sets none.
+        sparql_http_client = AsyncClient(
+            headers={"User-Agent": SPARQL_USER_AGENT},
+        )
+        logger.info("SPARQL client initialized")
+
+        try:
+            yield {
+                "elasticsearch_client": elasticsearch_client,
+                "insee_http_client": insee_http_client,
+                "melodi_http_client": melodi_http_client,
+                "sparql_http_client": sparql_http_client,
+            }
+        finally:
+            await elasticsearch_client.close()
+            await insee_http_client.aclose()
+            await melodi_http_client.aclose()
+            await sparql_http_client.aclose()
+
+    return app_lifespan

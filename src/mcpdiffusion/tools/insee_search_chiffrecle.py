@@ -7,8 +7,7 @@ from fastmcp import Context, FastMCP
 
 from ..config.tool_metadata import SEARCH_CHIFFRECLEF
 from ..core.errors import fail
-from ..core.logging import log_tool
-from ..infra.elasticsearch import get_client_es
+from ..infra.elasticsearch import get_elasticsearch_client
 from ..models.insee import (
     SearchInseeChiffrecleInput,
     SearchInseeChiffrecleOutput,
@@ -21,24 +20,23 @@ from ..services.insee_search import (
 
 # Fixme: the orchestration present in that function belongs in a service
 #   Indeed, the approach from one tool to another is inconsistent
-def register_search_insee_chiffreclef(mcp: FastMCP) -> None:
+def register_search_insee_chiffreclef(mcp: FastMCP, *, index: str) -> None:
     @mcp.tool(
         name=SEARCH_CHIFFRECLEF["tool_name"],
         description=SEARCH_CHIFFRECLEF["tool_description"],
         meta=SEARCH_CHIFFRECLEF["tool_metadata"],
     )
-    @log_tool
     async def search_insee_chiffrecle(
         params: SearchInseeChiffrecleInput,
         ctx: Context,
     ) -> SearchInseeChiffrecleOutput:
-        must, filters, should, must_not = build_text_clauses(
+        must, filters, should = build_text_clauses(
             query=params.query,
             year_of_reference=params.year_of_reference,
         )
 
         # Fixme: should is overridden here
-        filters, should = apply_collection_filters(
+        filters, collection_should = apply_collection_filters(
             filters,
             must_not_rapides=True,
             must_only_rapides=False,
@@ -48,13 +46,14 @@ def register_search_insee_chiffreclef(mcp: FastMCP) -> None:
             geo_keyword=params.geo_keyword,
         )
         try:
-            hits = execute_search(
+            hits = await execute_search(
                 must=must,
                 filters=filters,
-                should=should,
-                must_not=must_not,
+                should=should + collection_should,
+                minimum_should_match=1 if collection_should else 0,
                 number_of_results=params.number_of_results,
-                es=get_client_es(ctx),
+                es=get_elasticsearch_client(ctx),
+                index=index,
             )
         except (ESConnectionError, TransportError) as exc:
             fail(

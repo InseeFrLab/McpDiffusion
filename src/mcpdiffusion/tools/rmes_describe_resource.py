@@ -4,18 +4,20 @@ from __future__ import annotations
 from fastmcp import Context, FastMCP
 
 from ..config.tool_metadata import RMES_DESCRIBE_RESOURCE
-from ..core.logging import log_tool
-from ..infra.sparql import get_sparql_client
+from ..infra.sparql import get_sparql_http_client
 from ..models.rmes import DescribeResourceInput, DescribeResourceOutput
 from ..services.rmes import describe_resource
 
 
-def register_rmes_describe_resource(mcp: FastMCP) -> None:
+def register_rmes_describe_resource(mcp: FastMCP, *, endpoint: str) -> None:
     @mcp.tool(
         name=RMES_DESCRIBE_RESOURCE["tool_name"],
         description=RMES_DESCRIBE_RESOURCE["tool_description"],
         meta=RMES_DESCRIBE_RESOURCE["tool_metadata"],
     )
-    @log_tool
     async def describe_resource_tool(params: DescribeResourceInput, ctx: Context) -> DescribeResourceOutput:
-        return await describe_resource(params, sparql_client=get_sparql_client(ctx))
+        return await describe_resource(
+            params,
+            sparql_client=get_sparql_http_client(ctx),
+            endpoint=endpoint,
+        )

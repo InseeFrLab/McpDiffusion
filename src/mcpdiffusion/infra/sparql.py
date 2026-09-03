@@ -1,8 +1,8 @@
-"""SPARQL client accessor from FastMCP lifespan context."""
-from __future__ import annotations
+"""SPARQL client accessor from the FastMCP lifespan context."""
 
 from fastmcp import Context
+from httpx import AsyncClient
 
 
-def get_sparql_client(ctx: Context):
-    return ctx.lifespan_context["sparql_client"]
+def get_sparql_http_client(ctx: Context) -> AsyncClient:
+    return ctx.lifespan_context["sparql_http_client"]

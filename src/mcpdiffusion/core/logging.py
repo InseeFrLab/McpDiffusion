@@ -1,145 +1,32 @@
-"""Structured logging config + per-tool decorator."""
+"""Logging configuration, applied once at startup."""
 
-import functools
-import inspect
 import logging
-import time
-from typing import Any, Callable, TypeVar
+import logging.config
 
-from ..config.settings import get_settings
-
-_settings = get_settings()
-
-# Fixme: this is a trade-off to make log fall under the same logger name, I would not recommend it
-#   a convention is to use the module name for identification
-MAIN_LOGGER_NAME = "mcp.main"
-
-logging.basicConfig(
-    level=_settings.log_level,
-    # Fixme: the following format string is duplicated
-    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
-    force=True,
-)
-
-# Fixme: 'UVICORN_LOGGING_CONFIG' is leveraged in the server.py main block
-#   but this block is not always ran, especially when the app is launched using uvicorn
-#   this prevents the log level set from being applied to uvicorn logs
-#   I'd suggest unifying config in a single place to invoke it systematically
-#   Also, this config competes with the one above
-UVICORN_LOGGING_CONFIG = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "formatters": {
-        "default": {
-            "format": "%(asctime)s | %(levelname)s | %(name)s | %(message)s"
-        }
-    },
-    "handlers": {
-        "default": {
-            "class": "logging.StreamHandler",
-            "formatter": "default",
-        }
-    },
-    "root": {
-        "level": _settings.log_level,
-        "handlers": ["default"],
-    },
-}
-
-TOOLS_LOGGER_NAME = "mcp.tools"
-logger = logging.getLogger(TOOLS_LOGGER_NAME)
+LOG_FORMAT = "%(asctime)s | %(levelname)s | %(name)s | %(message)s"
 
 
-_F = TypeVar("_F", bound=Callable[..., Any])
-
-_SCRUB_FIELDS = {"password", "mdp", "token", "secret", "auth", "api_key"}
-_KWARGS_PREVIEW_LIMIT = 800
-
-
-# Fixme: only single level items are scrubbed
-def _scrub(kwargs: dict) -> str:
-    safe = {}
-    for k, v in kwargs.items():
-        if any(s in k.lower() for s in _SCRUB_FIELDS):
-            safe[k] = "***"
-        else:
-            safe[k] = v
-    text = repr(safe)
-    if len(text) > _KWARGS_PREVIEW_LIMIT:
-        return text[:_KWARGS_PREVIEW_LIMIT] + "...<truncated>"
-    return text
-
-
-def _result_count(result: Any) -> int | None:
-    if result is None:
-        return 0
-    if isinstance(result, (list, tuple)):
-        return len(result)
-    if isinstance(result, dict):
-        if "results" in result and isinstance(result["results"], list):
-            return len(result["results"])
-        if "count" in result:
-            return result["count"]
-    r = getattr(result, "results", None)
-    if isinstance(r, list):
-        return len(r)
-    return None
+def build_logging_config(level: str) -> dict:
+    return {
+        "version": 1,
+        "disable_existing_loggers": False,
+        "formatters": {
+            "default": {
+                "format": LOG_FORMAT,
+            },
+        },
+        "handlers": {
+            "default": {
+                "class": "logging.StreamHandler",
+                "formatter": "default",
+            },
+        },
+        "root": {
+            "level": level,
+            "handlers": ["default"],
+        },
+    }
 
 
-def log_tool(func: _F) -> _F:
-    """Decorator that logs entry, exit (duration + count) and errors."""
-    is_async = inspect.iscoroutinefunction(func)
-    name = func.__name__
-
-    def _log_exit(duration_ms: float, result: Any) -> None:
-        count = _result_count(result)
-        if count is None:
-            # Fixme: prefer using the extra key to provide additional elements to log instead of information
-            #   concatenated in a textual prose
-            logger.info("Tool exit: %s | %.1fms", name, duration_ms)
-        else:
-            logger.info(
-                "Tool exit: %s | %.1fms | count=%d", name, duration_ms, count
-            )
-
-    def _log_error(duration_ms: float, exc: BaseException) -> None:
-        # Fixme: the exception encapsulated within 'exc' is not leveraged fully,
-        #  the stack is missing which is critical information to log
-        code = getattr(exc, "args", ("",))[0] if exc.args else type(exc).__name__
-        logger.error(
-            "Tool error: %s | %.1fms | %s: %s",
-            name, duration_ms, type(exc).__name__, str(code)[:200],
-        )
-
-    # Fixme: this code can be simplified, especially when only a few lines differ per outcome
-    if is_async:
-        @functools.wraps(func)
-        async def async_wrapper(*args, **kwargs):
-            logger.info("Tool call: %s | kwargs=%s", name, _scrub(kwargs))
-            start = time.perf_counter()
-            try:
-                result = await func(*args, **kwargs)
-            # Fixme: this is very broad exception handling
-            #   Indeed, this also catches KeyboardInterrupt, SystemExit, and asyncio.CancelledError
-            except BaseException as exc:
-                _log_error((time.perf_counter() - start) * 1000, exc)
-                raise
-            _log_exit((time.perf_counter() - start) * 1000, result)
-            return result
-        wrapper: Callable[..., Any] = async_wrapper
-    else:
-        @functools.wraps(func)
-        def sync_wrapper(*args, **kwargs):
-            logger.info("Tool call: %s | kwargs=%s", name, _scrub(kwargs))
-            start = time.perf_counter()
-            try:
-                result = func(*args, **kwargs)
-            except BaseException as exc:
-                _log_error((time.perf_counter() - start) * 1000, exc)
-                raise
-            _log_exit((time.perf_counter() - start) * 1000, result)
-            return result
-        wrapper = sync_wrapper
-
-    wrapper.__signature__ = inspect.signature(func)  # type: ignore[attr-defined]
-    return wrapper  # type: ignore[return-value]
+def configure_logging(level: str) -> None:
+    logging.config.dictConfig(build_logging_config(level))

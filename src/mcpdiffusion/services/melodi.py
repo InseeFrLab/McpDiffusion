@@ -4,9 +4,10 @@ from __future__ import annotations
 from typing import Any
 
 import httpx
+from elasticsearch import AsyncElasticsearch
 from elasticsearch import ConnectionError as ESConnectionError
-from elasticsearch import TransportError, Elasticsearch
-from ..config.settings import Settings, get_settings
+from elasticsearch import TransportError
+
 from ..core.errors import fail
 from ..models.melodi import (
     ColumnResult,
@@ -25,11 +26,9 @@ async def get_melodi_observations(
     params: GetMelodiObservationsInput,
     *,
     http_client: httpx.AsyncClient,
-    settings: Settings | None = None,
 ) -> GetMelodiObservationsOutput:
-    # Fixme: same comment for settings, inject relevant properties only
-    s = settings or get_settings()
-    url = f"{s.melodi_data_base_url}/{params.dataset_id}"
+    # Resolved against the client's base_url.
+    url = f"/{params.dataset_id}"
     try:
         response = await http_client.get(
             url,
@@ -121,10 +120,9 @@ async def get_melodi_observations(
 async def search_melodi_datasets(
     params: SearchMelodiDatasetsInput,
     *,
-    settings: Settings | None = None,
-    es: Elasticsearch,
+    es: AsyncElasticsearch,
+    index: str,
 ) -> SearchMelodiDatasetsOutput:
-    s = settings or get_settings()
     filters: list[dict[str, Any]] = []
     if params.start_year:
         filters.append({
@@ -202,7 +200,10 @@ async def search_melodi_datasets(
     }
 
     try:
-        ds_res = es.search(index=s.es_index_melodi_datasets, body=body)
+        ds_res = await es.search(
+            index=index,
+            body=body,
+        )
     except (ESConnectionError, TransportError) as exc:
         fail(
             "BACKEND_UNAVAILABLE",
@@ -218,10 +219,7 @@ async def search_melodi_datasets(
         description = source.get("metadata", {}).get("description")
         if isinstance(description, list) and description:
             description = description[0]
-        # Fixme: this branch does nothing
-        elif isinstance(description, dict):
-            description = description
-        else:
+        elif not isinstance(description, dict):
             description = {"content": "", "lang": "fr"}
         results.append(
             DatasetSearchResult(
@@ -237,18 +235,16 @@ async def search_melodi_datasets(
 async def search_melodi_modalities(
     params: SearchMelodiModalitiesInput,
     *,
-    settings: Settings | None = None,
-    es: Elasticsearch,
+    es: AsyncElasticsearch,
+    index: str,
 ) -> SearchMelodiModalitiesOutput:
-    s = settings or get_settings()
     filters: list[dict[str, Any]] = [{"term": {"dataset_id": params.dataset_id}}]
     if params.columns_id:
         filters.append({"terms": {"code": params.columns_id}})
 
     try:
-        # Fixme: the 1st es.search call was formatted differently, pick a single convention
-        ds_column = es.search(
-            index=s.es_index_melodi_columns,
+        ds_column = await es.search(
+            index=index,
             size=20,
             query={
                 "bool": {

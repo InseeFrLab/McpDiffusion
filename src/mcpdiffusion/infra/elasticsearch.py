@@ -1,9 +1,8 @@
-"""Elasticsearch client accessor from FastMCP lifespan context."""
-# Fixme: this annotation seems unnecessary
-from __future__ import annotations
+"""Elasticsearch client accessor from the FastMCP lifespan context."""
 
+from elasticsearch import AsyncElasticsearch
 from fastmcp import Context
 
 
-def get_client_es(ctx: Context):
-    return ctx.lifespan_context["es_client"]
+def get_elasticsearch_client(ctx: Context) -> AsyncElasticsearch:
+    return ctx.lifespan_context["elasticsearch_client"]

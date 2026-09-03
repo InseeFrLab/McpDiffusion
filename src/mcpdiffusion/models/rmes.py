@@ -10,8 +10,8 @@ from pydantic import BaseModel, Field
 # --- Shared RMES constants exposed to tools ---
 
 # Fixme: a lot of values in here belongs in settings
-DEFAULT_TIMEOUT = 20.0
-MAX_TIMEOUT = 60.0
+DEFAULT_QUERY_TIMEOUT_SECONDS = 20.0
+MAX_QUERY_TIMEOUT_SECONDS = 60.0
 DEFAULT_ROW_LIMIT = 200
 MAX_ROW_LIMIT = 2000
 
@@ -144,8 +144,8 @@ class RunSparqlInput(BaseModel):
         description="Requete SPARQL complete (SELECT / ASK / CONSTRUCT / DESCRIBE).",
     )
     timeout: float = Field(
-        default=DEFAULT_TIMEOUT,
-        description=f"Timeout en secondes (plafonne a {MAX_TIMEOUT}s).",
+        default=DEFAULT_QUERY_TIMEOUT_SECONDS,
+        description=f"Timeout en secondes (plafonne a {MAX_QUERY_TIMEOUT_SECONDS}s).",
         gt=0,
     )
     max_rows: int = Field(

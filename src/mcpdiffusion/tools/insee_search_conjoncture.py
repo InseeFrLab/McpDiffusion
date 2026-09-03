@@ -8,9 +8,8 @@ from fastmcp import Context, FastMCP
 
 from ..config.tool_metadata import SEARCH_CONJONCTURE
 from ..core.errors import fail
-from ..core.logging import log_tool
 from ..data.themes import DICT_THEME_CONJ
-from ..infra.elasticsearch import get_client_es
+from ..infra.elasticsearch import get_elasticsearch_client
 from ..models.insee import (
     SearchInseeConjonctureInput,
     SearchInseeConjonctureOutput,
@@ -22,23 +21,21 @@ from ..services.insee_search import (
 )
 
 # Fixme: again, a lot of code in that tool that should belong in the service
-def register_search_insee_conjoncture(mcp: FastMCP) -> None:
+def register_search_insee_conjoncture(mcp: FastMCP, *, index: str) -> None:
     @mcp.tool(
         name=SEARCH_CONJONCTURE["tool_name"],
         description=SEARCH_CONJONCTURE["tool_description"],
         meta=SEARCH_CONJONCTURE["tool_metadata"],
     )
-    @log_tool
     async def search_insee_conjoncture(
         params: SearchInseeConjonctureInput,
         ctx: Context,
     ) -> SearchInseeConjonctureOutput:
-        must, filters, should, must_not = build_text_clauses(
+        must, filters, should = build_text_clauses(
             query=params.query,
             year_of_reference=params.year_of_reference,
         )
-        # Fixme: should is overridden
-        filters, should = apply_collection_filters(
+        filters, collection_should = apply_collection_filters(
             filters,
             # Fixme: the following allows for creating confusing combinaison
             must_not_rapides=False,
@@ -46,19 +43,20 @@ def register_search_insee_conjoncture(mcp: FastMCP) -> None:
         )
         if params.theme_conjoncture:
             subthemes = DICT_THEME_CONJ.get(params.theme_conjoncture)
-            # Fixme: I don't know if this is the wanted behavior, but a subtheme miss will discard filtering,
-            #  so return everything?
+            # Business rule: an unrecognised subtheme drops the filter silently and returns everything,
+            # the same shape as the theme and geo_niveau filters.
             if subthemes:
                 filters.append(Q("terms", conjoncture_libelle=subthemes))
 
         try:
-            hits = execute_search(
+            hits = await execute_search(
                 must=must,
                 filters=filters,
-                should=should,
-                must_not=must_not,
+                should=should + collection_should,
+                minimum_should_match=1 if collection_should else 0,
                 number_of_results=params.number_of_results,
-                es=get_client_es(ctx),
+                es=get_elasticsearch_client(ctx),
+                index=index,
             )
         except (ESConnectionError, TransportError) as exc:
             fail(

@@ -45,8 +45,6 @@ spec:
           env:
           - name: ES_HOST
             value: "http://elasticsearch-service:9200"
-          - name: ES_HOST_LOCAL
-            value: "http://elasticsearch-service:9200"
           # Optional resources block – adjust as needed
           resources:
             limits:

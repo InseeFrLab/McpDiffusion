@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import Optional
 from urllib.parse import urljoin, urlparse
 
 from bs4 import BeautifulSoup
@@ -11,7 +10,6 @@ from trafilatura.settings import Extractor
 
 import httpx
 
-from ..config.settings import Settings, get_settings
 from ..core.errors import fail
 from ..models.insee import (
     DocumentResult,
@@ -86,26 +84,28 @@ def _format_sommaire(flat_items: list[dict[str, str]]) -> dict[str, dict[str, st
     return dict(grouped)
 
 
+_TRUNCATION_MARKER = """
+
+<!-- [CONTENT TRUNCATED: middle section omitted to keep the response compact for the model] -->
+
+"""
+
+
 def _truncate(text: str, limit: int = _MAX_MARKDOWN_CHARS) -> tuple[str, bool]:
     if len(text) <= limit:
         return text, False
-    # Fixme: avoid magic numbers popping here and there
-    head_size = (limit * 2) // 3
-    # Fixme: what happens if limit is too small? 'tail_size' can go negative
-    tail_size = limit - head_size - 200
-    # Fixme: prefer multiline strings which are more readable and easier to deal with
-    marker = (
-        "\n\n<!-- [CONTENT TRUNCATED: middle section omitted to keep the "
-        "response compact for the model] -->\n\n"
-    )
-    return text[:head_size] + marker + text[-tail_size:], True
+    budget = max(0, limit - len(_TRUNCATION_MARKER))
+    head_size = (budget * 2) // 3
+    tail_size = budget - head_size
+    # text[-0:] returns the whole string, so an empty tail has to be spelled out.
+    tail = text[-tail_size:] if tail_size else ""
+    return text[:head_size] + _TRUNCATION_MARKER + tail, True
 
 
-# Fixme: injecting the whole settings is bad separation of concerns
-async def _fetch_html(url: str, settings: Settings, http_client: httpx.AsyncClient) -> str:
-    full_url = settings.insee_base_url + url if not url.startswith(("http://", "https://")) else url
+async def _fetch_html(url: str, http_client: httpx.AsyncClient) -> str:
+    # A relative path resolves against the client's base_url; an absolute one overrides it.
     try:
-        response = await http_client.get(full_url, follow_redirects=True)
+        response = await http_client.get(url, follow_redirects=True)
         response.raise_for_status()
         return response.text
     # Fixme: the error handling is not correctly designed, at a global scale
@@ -142,16 +142,11 @@ async def _fetch_html(url: str, settings: Settings, http_client: httpx.AsyncClie
         raise
 
 
-# Fixme: here params obfuscates the meaning of the input argument
 async def get_insee_document(
     params: GetInseeDocumentInput,
     *,
     http_client: httpx.AsyncClient,
-    settings: Settings | None = None,
 ) -> GetInseeDocumentOutput:
-    # Fixme: not the right place to init settings
-    s = settings or get_settings()
-
     if not params.list_of_url:
         fail(
             "INVALID_INPUT",
@@ -164,16 +159,16 @@ async def get_insee_document(
     # Fixme: on top of that, the fetching is done sequentially, impacting the event loop
     for url in params.list_of_url:
         try:
-            html = await _fetch_html(str(url), s, http_client)
+            html = await _fetch_html(str(url), http_client)
             markdown = extract(html, options=_TRAFILATURA_OPTIONS) or ""
             if params.truncate_content:
                 markdown, truncated = _truncate(markdown)
             else:
                 truncated = False
 
-            sommaire: Optional[dict[str, dict[str, str]]] = None
+            sommaire: dict[str, dict[str, str]] | None = None
             if params.include_sommaire:
-                flat = _parse_sommaire(html, s.insee_base_url)
+                flat = _parse_sommaire(html, str(http_client.base_url))
                 sommaire = _format_sommaire(flat) if flat else None
 
             results.append(

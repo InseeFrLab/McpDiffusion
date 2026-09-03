@@ -12,11 +12,11 @@ from typing import Any
 
 import httpx
 
-from ..config.settings import Settings, get_settings
 from ..models.rmes import (
+    DEFAULT_QUERY_TIMEOUT_SECONDS,
     GRAPH_BASE,
     MAX_ROW_LIMIT,
-    MAX_TIMEOUT,
+    MAX_QUERY_TIMEOUT_SECONDS,
     CategoryBucket,
     DescribeResourceOutput,
     GraphCategoryChoice,
@@ -32,7 +32,11 @@ from ..models.rmes import (
 )
 
 # Fixme: follow a clear convention for logger names
-logger = logging.getLogger("mcp.rmes")
+logger = logging.getLogger(__name__)
+
+# Listing every graph is far heavier than a normal user query, so it gets its own budget.
+GRAPH_LISTING_TIMEOUT_SECONDS = 45.0
+GRAPH_LISTING_MAX_ROWS = 1000
 
 # Cache for raw graph rows (expensive COUNT query)
 _GRAPH_CACHE: dict[str, Any] = {"data": None, "ts": 0.0}
@@ -200,9 +204,7 @@ _CATEGORY_AUTRE = _CategoryRule(
     match=lambda path: True,
 )
 
-# Fixme: '_RULES_BY_KEY' uses '_ALL_RULES', but ultimately, '_RULES_BY_KEY' is never used
 _ALL_RULES = CATEGORY_DEFS + [_CATEGORY_AUTRE]
-_RULES_BY_KEY = {r.key: r for r in _ALL_RULES}
 
 
 def _relative_path(graph_uri: str) -> str:
@@ -266,9 +268,8 @@ async def _execute_sparql(
     max_rows: int,
     *,
     sparql_client: httpx.AsyncClient,
-    settings: Settings | None = None,
+    endpoint: str,
 ) -> dict[str, Any]:
-    s = settings or get_settings()
     query_form = _detect_query_form(query)
 
     if query_form == "UNKNOWN":
@@ -285,10 +286,10 @@ async def _execute_sparql(
     try:
         client = sparql_client
         response = await client.post(
-            s.rmes_endpoint,
+            endpoint,
             data={"query": effective_query},
             headers={"Accept": accept},
-            timeout=min(timeout, MAX_TIMEOUT),
+            timeout=min(timeout, MAX_QUERY_TIMEOUT_SECONDS),
         )
         response.raise_for_status()
 
@@ -319,7 +320,7 @@ async def _execute_sparql(
         )
 
     except httpx.RequestError as exc:
-        logger.warning("Erreur reseau vers %s: %s", s.rmes_endpoint, exc)
+        logger.warning("Erreur reseau vers %s: %s", endpoint, exc)
         return _error_payload(
             SparqlErrorType.NETWORK_ERROR,
             f"Impossible de contacter l'endpoint RMES ({type(exc).__name__}).",
@@ -345,7 +346,7 @@ async def _execute_sparql(
 async def _get_raw_graph_rows(
     *,
     sparql_client: httpx.AsyncClient,
-    settings: Settings | None = None,
+    endpoint: str,
 ) -> dict[str, Any]:
     now = time.time()
     if _GRAPH_CACHE["data"] is None or (now - _GRAPH_CACHE["ts"]) > _GRAPH_CACHE_TTL:
@@ -358,9 +359,11 @@ async def _get_raw_graph_rows(
         #  consider an asyncio.Lock + a second freshness check inside it,
         #  otherwise each waiter just re-runs the same expensive query
         result = await _execute_sparql(
-            # Fixme: those magic values belong in the settings
-            query, timeout=45.0, max_rows=1000,
-            sparql_client=sparql_client, settings=settings,
+            query,
+            timeout=GRAPH_LISTING_TIMEOUT_SECONDS,
+            max_rows=GRAPH_LISTING_MAX_ROWS,
+            sparql_client=sparql_client,
+            endpoint=endpoint,
         )
         if "error" in result:
             return result
@@ -406,10 +409,10 @@ async def list_graphs(
     params: ListGraphsInput,
     *,
     sparql_client: httpx.AsyncClient,
-    settings: Settings | None = None,
+    endpoint: str,
 ) -> ListGraphsOutput:
     raw = await _get_raw_graph_rows(
-        sparql_client=sparql_client, settings=settings,
+        sparql_client=sparql_client, endpoint=endpoint,
     )
     if "error" in raw:
         return ListGraphsOutput(
@@ -466,7 +469,7 @@ async def describe_resource(
     params: DescribeResourceInput,
     *,
     sparql_client: httpx.AsyncClient,
-    settings: Settings | None = None,
+    endpoint: str,
 ) -> DescribeResourceOutput:
     graph_clause = f"<{params.graph}>" if params.graph else "?g"
     graph_values = f"VALUES ?g {{ <{params.graph}> }}" if params.graph else ""
@@ -484,11 +487,9 @@ async def describe_resource(
       }}
     }} LIMIT {MAX_ROW_LIMIT}
     """
-    # Fixme: put the import at the top
-    from ..models.rmes import DEFAULT_TIMEOUT
     result = await _execute_sparql(
-        query, timeout=DEFAULT_TIMEOUT, max_rows=MAX_ROW_LIMIT,
-        sparql_client=sparql_client, settings=settings,
+        query, timeout=DEFAULT_QUERY_TIMEOUT_SECONDS, max_rows=MAX_ROW_LIMIT,
+        sparql_client=sparql_client, endpoint=endpoint,
     )
 
     if "error" in result:
@@ -504,7 +505,7 @@ async def run_sparql(
     params: RunSparqlInput,
     *,
     sparql_client: httpx.AsyncClient,
-    settings: Settings | None = None,
+    endpoint: str,
 ) -> RunSparqlOutput:
     if not params.full_sparql_query or not params.full_sparql_query.strip():
         return RunSparqlOutput(
@@ -518,7 +519,7 @@ async def run_sparql(
     max_rows = max(1, min(params.max_rows, MAX_ROW_LIMIT))
     result = await _execute_sparql(
         params.full_sparql_query, timeout=params.timeout, max_rows=max_rows,
-        sparql_client=sparql_client, settings=settings,
+        sparql_client=sparql_client, endpoint=endpoint,
     )
 
     if "error" in result:

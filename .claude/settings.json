@@ -3,5 +3,8 @@
     "allow": [
       "Bash(uv run:*)"
     ]
-  }
+  },
+  "enabledMcpjsonServers": [
+    "fastmcp-docs"
+  ]
 }

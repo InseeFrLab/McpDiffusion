@@ -4,3 +4,5 @@
 __pycache__/
 mcp_*
 .idea
+.claude/settings.local.json
+TODO.md

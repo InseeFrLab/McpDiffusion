@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "MCP server for INSEE data diffusion"
 requires-python = ">=3.12"
 dependencies = [
-    "fastmcp[tasks]==3.4.2",
+    "fastmcp>=4.0.0",
     "elasticsearch==9.5.0",
     "uvicorn==0.52.4",
     "requests==2.34.2",

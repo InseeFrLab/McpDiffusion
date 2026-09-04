@@ -1,16 +1,15 @@
 """Business logic for get_insee_document tool."""
+
 from __future__ import annotations
 
+import logging
 from collections import defaultdict
 from urllib.parse import urljoin, urlparse
 
+import httpx
 from bs4 import BeautifulSoup
 from trafilatura import extract
 from trafilatura.settings import Extractor
-
-import logging
-
-import httpx
 
 from ..core.errors import AppToolError
 from ..models.insee import (
@@ -37,15 +36,15 @@ def _as_relative(url: str) -> str:
     p = urlparse(url)
     return f"{p.path}?{p.query}" if p.query else p.path
 
+
 # Fixme: some complex composed types are involved multiple times - ex: list[dict[str, str]
-#   it might be better to leverage Pydantic and create meaningful type aliases - ex TableOfContentParams = list[dict[str, str]
+#   it might be better to leverage Pydantic and create meaningful type aliases
+#   - ex TableOfContentParams = list[dict[str, str]]
 def _parse_sommaire(html: str, base_url: str) -> list[dict[str, str]]:
     soup = BeautifulSoup(html, "lxml")
     results: list[dict[str, str]] = []
 
-    sommaire_section = soup.find(
-        lambda t: t.has_attr("class") and any("sommaire" in c for c in t["class"])
-    )
+    sommaire_section = soup.find(lambda t: t.has_attr("class") and any("sommaire" in c for c in t["class"]))
     if not sommaire_section:
         return []
 
@@ -67,9 +66,7 @@ def _parse_sommaire(html: str, base_url: str) -> list[dict[str, str]]:
                 title = a.get_text(strip=True)
                 absolute = urljoin(base_url, a.get("href", ""))
                 rel_url = _as_relative(absolute)
-                results.append(
-                    {"category": category_name, "title": title, "url": rel_url}
-                )
+                results.append({"category": category_name, "title": title, "url": rel_url})
         else:
             a = top_li.find("a")
             if not a:
@@ -123,8 +120,7 @@ async def _fetch_html(url: str, http_client: httpx.AsyncClient) -> str:
         if exc.response.status_code == 404:
             raise AppToolError(
                 "NOT_FOUND",
-                f"INSEE document not found at {target} (HTTP 404). "
-                "Verify the URL with `search_insee_documents`.",
+                f"INSEE document not found at {target} (HTTP 404). Verify the URL with `search_insee_documents`.",
             )
         else:
             raise AppToolError(
@@ -159,8 +155,7 @@ async def get_insee_document(
     if not params.list_of_url:
         raise AppToolError(
             "INVALID_INPUT",
-            "list_of_url must contain at least one URL. "
-            "Use `search_insee_documents` to find URLs first.",
+            "list_of_url must contain at least one URL. Use `search_insee_documents` to find URLs first.",
         )
 
     results: list[DocumentResult] = []

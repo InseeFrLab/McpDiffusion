@@ -5,15 +5,13 @@ from collections.abc import AsyncIterator, Callable
 from typing import Any
 
 from elasticsearch import AsyncElasticsearch
-from httpx import AsyncClient, Timeout
 from fastmcp.server.lifespan import lifespan
+from httpx import AsyncClient, Timeout
 
 logger = logging.getLogger(__name__)
 
 # insee.fr serves different markup to unknown agents, so the scraper has to look like a browser.
-INSEE_USER_AGENT = (
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
-)
+INSEE_USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
 # The APIs have no such requirement, so they get an honest identity.
 MELODI_USER_AGENT = "McpDiffusion/0.1"
 SPARQL_USER_AGENT = "MCP-RMeS/2.0"

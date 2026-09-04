@@ -1,4 +1,5 @@
 """Business logic for the feedback tool."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -42,9 +43,7 @@ async def send_feedback(params: SendFeedbackInput) -> SendFeedbackOutput:
         #   just hope this is not ultimately fed to an LLM
         # Fixme: a big flaw is that feedback.md is versioned, so user feedback might be fed into git
         # Fixme: beware the data is lost on each restart
-        f"## {timestamp} — {params.username}\n\n"
-        f"{params.feedback}\n\n"
-        "---\n\n"
+        f"## {timestamp} — {params.username}\n\n{params.feedback}\n\n---\n\n"
     )
 
     # Fixme: this call is blocking the event loop

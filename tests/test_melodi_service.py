@@ -1,4 +1,5 @@
 """Unit tests for mcpdiffusion.services.melodi."""
+
 from __future__ import annotations
 
 import json
@@ -33,6 +34,7 @@ _SETTINGS = Settings(
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _json_http_response(payload: dict, url: str = "https://api.test") -> httpx.Response:
     return httpx.Response(
         200,
@@ -59,6 +61,7 @@ class FakeElasticsearch:
 # get_melodi_observations
 # ===================================================================
 
+
 class TestGetMelodiObservations:
     async def test_success(self):
         payload = {"observations": [{"v": 1}, {"v": 2}, {"v": 3}]}
@@ -71,14 +74,17 @@ class TestGetMelodiObservations:
         assert result.count == 3
 
     async def test_year_filtering(self):
-        payload = {"observations": [
-            {"dimensions": {"TIME_PERIOD": "2020-01"}, "v": 1},
-            {"dimensions": {"TIME_PERIOD": "2021-06"}, "v": 2},
-            {"dimensions": {"TIME_PERIOD": "2022-12"}, "v": 3},
-        ]}
+        payload = {
+            "observations": [
+                {"dimensions": {"TIME_PERIOD": "2020-01"}, "v": 1},
+                {"dimensions": {"TIME_PERIOD": "2021-06"}, "v": 2},
+                {"dimensions": {"TIME_PERIOD": "2022-12"}, "v": 3},
+            ]
+        }
         fake = FakeAsyncClient(lambda url, **kw: _json_http_response(payload, url))
         params = GetMelodiObservationsInput(
-            dataset_id="DS_TEST", list_of_year=[2020, 2022],
+            dataset_id="DS_TEST",
+            list_of_year=[2020, 2022],
         )
 
         result = await get_melodi_observations(params, http_client=fake, settings=_SETTINGS)
@@ -101,7 +107,9 @@ class TestGetMelodiObservations:
         params = GetMelodiObservationsInput(dataset_id="DS_TEST")
         with pytest.raises(ToolError, match="BACKEND_UNAVAILABLE"):
             await get_melodi_observations(
-                params, http_client=FakeAsyncClient(handler), settings=_SETTINGS,
+                params,
+                http_client=FakeAsyncClient(handler),
+                settings=_SETTINGS,
             )
 
     async def test_404_raises_tool_error(self):
@@ -112,7 +120,9 @@ class TestGetMelodiObservations:
         params = GetMelodiObservationsInput(dataset_id="DS_NONEXIST")
         with pytest.raises(ToolError, match="NOT_FOUND"):
             await get_melodi_observations(
-                params, http_client=FakeAsyncClient(handler), settings=_SETTINGS,
+                params,
+                http_client=FakeAsyncClient(handler),
+                settings=_SETTINGS,
             )
 
     async def test_400_raises_tool_error(self):
@@ -123,15 +133,20 @@ class TestGetMelodiObservations:
         params = GetMelodiObservationsInput(dataset_id="DS_TEST")
         with pytest.raises(ToolError, match="INVALID_INPUT"):
             await get_melodi_observations(
-                params, http_client=FakeAsyncClient(handler), settings=_SETTINGS,
+                params,
+                http_client=FakeAsyncClient(handler),
+                settings=_SETTINGS,
             )
 
     async def test_non_json_response_raises(self):
-        fake = FakeAsyncClient(lambda url, **kw: httpx.Response(
-            200, content=b"not json",
-            headers={"content-type": "text/plain"},
-            request=httpx.Request("GET", url),
-        ))
+        fake = FakeAsyncClient(
+            lambda url, **kw: httpx.Response(
+                200,
+                content=b"not json",
+                headers={"content-type": "text/plain"},
+                request=httpx.Request("GET", url),
+            )
+        )
         params = GetMelodiObservationsInput(dataset_id="DS_TEST")
         with pytest.raises(ToolError, match="PARSE_ERROR"):
             await get_melodi_observations(params, http_client=fake, settings=_SETTINGS)
@@ -157,24 +172,31 @@ class TestGetMelodiObservations:
 # search_melodi_datasets
 # ===================================================================
 
+
 class TestSearchMelodiDatasets:
     async def test_success(self):
         es_response = {
-            "hits": {"hits": [{
-                "_id": "DS_IPC",
-                "_score": 10.5,
-                "_source": {
-                    "columns": "COL1 Label1 | COL2 Label2",
-                    "metadata": {
-                        "description": {"content": "Price index", "lang": "fr"},
-                    },
-                },
-            }]},
+            "hits": {
+                "hits": [
+                    {
+                        "_id": "DS_IPC",
+                        "_score": 10.5,
+                        "_source": {
+                            "columns": "COL1 Label1 | COL2 Label2",
+                            "metadata": {
+                                "description": {"content": "Price index", "lang": "fr"},
+                            },
+                        },
+                    }
+                ]
+            },
         }
         params = SearchMelodiDatasetsInput(french_query="prix")
 
         result = await search_melodi_datasets(
-            params, es=FakeElasticsearch(response=es_response), settings=_SETTINGS,
+            params,
+            es=FakeElasticsearch(response=es_response),
+            settings=_SETTINGS,
         )
 
         assert len(result.results) == 1
@@ -198,18 +220,23 @@ class TestSearchMelodiDatasets:
 
     async def test_description_list_takes_first(self):
         es_response = {
-            "hits": {"hits": [{
-                "_id": "DS_1", "_score": 1.0,
-                "_source": {
-                    "columns": "",
-                    "metadata": {
-                        "description": [
-                            {"content": "First", "lang": "fr"},
-                            {"content": "Second", "lang": "en"},
-                        ],
-                    },
-                },
-            }]},
+            "hits": {
+                "hits": [
+                    {
+                        "_id": "DS_1",
+                        "_score": 1.0,
+                        "_source": {
+                            "columns": "",
+                            "metadata": {
+                                "description": [
+                                    {"content": "First", "lang": "fr"},
+                                    {"content": "Second", "lang": "en"},
+                                ],
+                            },
+                        },
+                    }
+                ]
+            },
         }
         result = await search_melodi_datasets(
             SearchMelodiDatasetsInput(french_query="test"),
@@ -220,10 +247,15 @@ class TestSearchMelodiDatasets:
 
     async def test_description_missing_defaults(self):
         es_response = {
-            "hits": {"hits": [{
-                "_id": "DS_1", "_score": 1.0,
-                "_source": {"columns": "", "metadata": {}},
-            }]},
+            "hits": {
+                "hits": [
+                    {
+                        "_id": "DS_1",
+                        "_score": 1.0,
+                        "_source": {"columns": "", "metadata": {}},
+                    }
+                ]
+            },
         }
         result = await search_melodi_datasets(
             SearchMelodiDatasetsInput(french_query="test"),
@@ -235,15 +267,20 @@ class TestSearchMelodiDatasets:
 
     async def test_description_dict_kept_as_is(self):
         es_response = {
-            "hits": {"hits": [{
-                "_id": "DS_1", "_score": 1.0,
-                "_source": {
-                    "columns": "",
-                    "metadata": {
-                        "description": {"content": "Direct dict", "lang": "en"},
-                    },
-                },
-            }]},
+            "hits": {
+                "hits": [
+                    {
+                        "_id": "DS_1",
+                        "_score": 1.0,
+                        "_source": {
+                            "columns": "",
+                            "metadata": {
+                                "description": {"content": "Direct dict", "lang": "en"},
+                            },
+                        },
+                    }
+                ]
+            },
         }
         result = await search_melodi_datasets(
             SearchMelodiDatasetsInput(french_query="test"),
@@ -257,28 +294,43 @@ class TestSearchMelodiDatasets:
 # search_melodi_modalities
 # ===================================================================
 
+
 class TestSearchMelodiModalities:
     async def test_success_with_inner_hits(self):
         es_response = {
-            "hits": {"hits": [{
-                "_source": {"code": "PRICES", "text": "Price types"},
-                "inner_hits": {
-                    "modalities": {"hits": {"hits": [{
-                        "_score": 5.0,
-                        "_source": {
-                            "code": "D",
-                            "label": {"en": "Unit value", "fr": "Valeur unitaire"},
+            "hits": {
+                "hits": [
+                    {
+                        "_source": {"code": "PRICES", "text": "Price types"},
+                        "inner_hits": {
+                            "modalities": {
+                                "hits": {
+                                    "hits": [
+                                        {
+                                            "_score": 5.0,
+                                            "_source": {
+                                                "code": "D",
+                                                "label": {"en": "Unit value", "fr": "Valeur unitaire"},
+                                            },
+                                        }
+                                    ]
+                                }
+                            },
                         },
-                    }]}},
-                },
-            }]},
+                    }
+                ]
+            },
         }
         params = SearchMelodiModalitiesInput(
-            dataset_id="DS_IPC", columns_id=["PRICES"], french_query="prix",
+            dataset_id="DS_IPC",
+            columns_id=["PRICES"],
+            french_query="prix",
         )
 
         result = await search_melodi_modalities(
-            params, es=FakeElasticsearch(response=es_response), settings=_SETTINGS,
+            params,
+            es=FakeElasticsearch(response=es_response),
+            settings=_SETTINGS,
         )
 
         assert len(result.results) == 1
@@ -291,7 +343,9 @@ class TestSearchMelodiModalities:
     async def test_empty_results_raises_tool_error(self):
         es = FakeElasticsearch(response={"hits": {"hits": []}})
         params = SearchMelodiModalitiesInput(
-            dataset_id="DS_X", columns_id=["COL"], french_query="unknown",
+            dataset_id="DS_X",
+            columns_id=["COL"],
+            french_query="unknown",
         )
 
         with pytest.raises(ToolError, match="EMPTY_RESULT"):
@@ -300,7 +354,9 @@ class TestSearchMelodiModalities:
     async def test_es_error_raises(self):
         es = FakeElasticsearch(error=ESConnectionError("down"))
         params = SearchMelodiModalitiesInput(
-            dataset_id="DS_X", columns_id=["COL"], french_query="test",
+            dataset_id="DS_X",
+            columns_id=["COL"],
+            french_query="test",
         )
 
         with pytest.raises(ToolError, match="BACKEND_UNAVAILABLE"):
@@ -308,17 +364,25 @@ class TestSearchMelodiModalities:
 
     async def test_no_inner_hits_returns_empty_modalities(self):
         es_response = {
-            "hits": {"hits": [{
-                "_source": {"code": "GEO", "text": "Geography"},
-                "inner_hits": {"modalities": {"hits": {"hits": []}}},
-            }]},
+            "hits": {
+                "hits": [
+                    {
+                        "_source": {"code": "GEO", "text": "Geography"},
+                        "inner_hits": {"modalities": {"hits": {"hits": []}}},
+                    }
+                ]
+            },
         }
         params = SearchMelodiModalitiesInput(
-            dataset_id="DS_1", columns_id=["GEO"], french_query="france",
+            dataset_id="DS_1",
+            columns_id=["GEO"],
+            french_query="france",
         )
 
         result = await search_melodi_modalities(
-            params, es=FakeElasticsearch(response=es_response), settings=_SETTINGS,
+            params,
+            es=FakeElasticsearch(response=es_response),
+            settings=_SETTINGS,
         )
 
         assert len(result.results) == 1
@@ -326,22 +390,36 @@ class TestSearchMelodiModalities:
 
     async def test_missing_label_defaults_to_empty(self):
         es_response = {
-            "hits": {"hits": [{
-                "_source": {"code": "COL", "text": "Column"},
-                "inner_hits": {
-                    "modalities": {"hits": {"hits": [{
-                        "_score": 1.0,
-                        "_source": {"code": "X", "label": None},
-                    }]}},
-                },
-            }]},
+            "hits": {
+                "hits": [
+                    {
+                        "_source": {"code": "COL", "text": "Column"},
+                        "inner_hits": {
+                            "modalities": {
+                                "hits": {
+                                    "hits": [
+                                        {
+                                            "_score": 1.0,
+                                            "_source": {"code": "X", "label": None},
+                                        }
+                                    ]
+                                }
+                            },
+                        },
+                    }
+                ]
+            },
         }
         params = SearchMelodiModalitiesInput(
-            dataset_id="DS_1", columns_id=["COL"], french_query="test",
+            dataset_id="DS_1",
+            columns_id=["COL"],
+            french_query="test",
         )
 
         result = await search_melodi_modalities(
-            params, es=FakeElasticsearch(response=es_response), settings=_SETTINGS,
+            params,
+            es=FakeElasticsearch(response=es_response),
+            settings=_SETTINGS,
         )
 
         mod = result.results[0].matching_modalities[0]

@@ -1,4 +1,5 @@
 """Tool: search_insee_conjoncture -- thin registration layer."""
+
 from __future__ import annotations
 
 from elasticsearch import ConnectionError as ESConnectionError
@@ -19,6 +20,7 @@ from ..services.insee_search import (
     build_text_clauses,
     execute_search,
 )
+
 
 # Fixme: again, a lot of code in that tool that should belong in the service
 def register_search_insee_conjoncture(mcp: FastMCP, *, index: str) -> None:
@@ -61,8 +63,7 @@ def register_search_insee_conjoncture(mcp: FastMCP, *, index: str) -> None:
         except (ESConnectionError, TransportError) as exc:
             raise AppToolError(
                 "BACKEND_UNAVAILABLE",
-                f"INSEE conjoncture search backend unreachable: {exc}. "
-                "Verify ES_HOST and try again.",
+                f"INSEE conjoncture search backend unreachable: {exc}. Verify ES_HOST and try again.",
                 retryable=True,
             )
         return SearchInseeConjonctureOutput(results=hits, count=len(hits))

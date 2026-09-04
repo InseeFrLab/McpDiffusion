@@ -30,7 +30,9 @@ step — the offending parameter, or the tool that produces a valid value. Never
   (it swallows `CancelledError`).
 - Translate once, at the boundary owning the dependency. Never re-wrap an already typed error.
 - Never swallow: no empty `except`, no default on failure, no log-and-continue.
-- Chain with `raise ... from exc`.
+- Chain with `raise ... from exc`. Server-side hygiene only: `__cause__` never crosses the wire, so it
+  leaks nothing, and Python keeps the original either way — this just states that it was the cause rather
+  than an error raised while handling one.
 
 ## Use what FastMCP provides
 

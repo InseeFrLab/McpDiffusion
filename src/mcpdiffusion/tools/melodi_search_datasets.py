@@ -1,4 +1,5 @@
 """Tool: search_melodi_datasets -- thin registration layer."""
+
 from __future__ import annotations
 
 from fastmcp import Context, FastMCP

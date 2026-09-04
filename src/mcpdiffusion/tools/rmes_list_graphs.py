@@ -1,4 +1,5 @@
 """Tool: RMES_list_graphs -- thin registration layer."""
+
 from __future__ import annotations
 
 from fastmcp import Context, FastMCP

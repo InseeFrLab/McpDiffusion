@@ -3,6 +3,7 @@
 Contains: taxonomy, categorization, SPARQL execution, graph cache,
 and high-level operations for the three RMES tools.
 """
+
 from __future__ import annotations
 
 import logging
@@ -16,18 +17,18 @@ from ..core.errors import AppToolError
 from ..models.rmes import (
     DEFAULT_QUERY_TIMEOUT_SECONDS,
     GRAPH_BASE,
-    MAX_ROW_LIMIT,
     MAX_QUERY_TIMEOUT_SECONDS,
+    MAX_ROW_LIMIT,
     CategoryBucket,
+    DescribeResourceInput,
     DescribeResourceOutput,
     GraphCategoryChoice,
     GraphRow,
+    ListGraphsInput,
     ListGraphsOutput,
     ResourceProperty,
-    RunSparqlOutput,
     RunSparqlInput,
-    DescribeResourceInput,
-    ListGraphsInput,
+    RunSparqlOutput,
 )
 
 # Fixme: follow a clear convention for logger names
@@ -66,6 +67,7 @@ avec ce tool.
 
 # Fixme: this is too broad of a type
 CategoryMatcher = Any  # Callable[[str], bool]
+
 
 # Fixme: you can use an immutable (frozen) dataclass instead - ex: annotate the class with '@dataclass(frozen=True)'
 class _CategoryRule:
@@ -208,7 +210,7 @@ _ALL_RULES = CATEGORY_DEFS + [_CATEGORY_AUTRE]
 
 def _strip_graph_base(graph_uri: str) -> str:
     if graph_uri.startswith(GRAPH_BASE):
-        return graph_uri[len(GRAPH_BASE):]
+        return graph_uri[len(GRAPH_BASE) :]
     return graph_uri
 
 
@@ -254,6 +256,7 @@ def _accept_header(query_form: str) -> str:
 # ---------------------------------------------------------------------------
 # Low-level SPARQL execution
 # ---------------------------------------------------------------------------
+
 
 async def _execute_sparql(
     query: str,
@@ -343,8 +346,7 @@ async def _get_raw_graph_rows(
     now = time.time()
     if _GRAPH_CACHE["data"] is None or (now - _GRAPH_CACHE["ts"]) > _GRAPH_CACHE_TTL:
         query = (
-            "SELECT ?g (COUNT(*) AS ?nbTriples) WHERE { GRAPH ?g { ?s ?p ?o } } "
-            "GROUP BY ?g ORDER BY DESC(?nbTriples)"
+            "SELECT ?g (COUNT(*) AS ?nbTriples) WHERE { GRAPH ?g { ?s ?p ?o } } GROUP BY ?g ORDER BY DESC(?nbTriples)"
         )
         # Fixme: note that while this request runs (async nature),
         #  other concurrent requests can still enter the current block
@@ -358,8 +360,7 @@ async def _get_raw_graph_rows(
             endpoint=endpoint,
         )
         rows = [
-            {"graph": b["g"]["value"], "triples": int(b["nbTriples"]["value"])}
-            for b in result["results"]["bindings"]
+            {"graph": b["g"]["value"], "triples": int(b["nbTriples"]["value"])} for b in result["results"]["bindings"]
         ]
         _GRAPH_CACHE["data"] = rows
         _GRAPH_CACHE["ts"] = now
@@ -370,6 +371,7 @@ async def _get_raw_graph_rows(
 # ---------------------------------------------------------------------------
 # High-level tool operations
 # ---------------------------------------------------------------------------
+
 
 def _build_category_summary(rows: list[dict[str, Any]]) -> list[CategoryBucket]:
     buckets: dict[str, CategoryBucket] = {}
@@ -472,8 +474,11 @@ async def describe_resource(
     }} LIMIT {MAX_ROW_LIMIT}
     """
     result = await _execute_sparql(
-        query, timeout=DEFAULT_QUERY_TIMEOUT_SECONDS, max_rows=MAX_ROW_LIMIT,
-        sparql_client=sparql_client, endpoint=endpoint,
+        query,
+        timeout=DEFAULT_QUERY_TIMEOUT_SECONDS,
+        max_rows=MAX_ROW_LIMIT,
+        sparql_client=sparql_client,
+        endpoint=endpoint,
     )
 
     properties = _parse_bindings_to_properties(result["results"]["bindings"])
@@ -494,8 +499,11 @@ async def run_sparql(
 
     max_rows = max(1, min(params.max_rows, MAX_ROW_LIMIT))
     result = await _execute_sparql(
-        params.full_sparql_query, timeout=params.timeout, max_rows=max_rows,
-        sparql_client=sparql_client, endpoint=endpoint,
+        params.full_sparql_query,
+        timeout=params.timeout,
+        max_rows=max_rows,
+        sparql_client=sparql_client,
+        endpoint=endpoint,
     )
 
     if result.get("format") == "turtle":

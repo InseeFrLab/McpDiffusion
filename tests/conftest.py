@@ -1,4 +1,5 @@
 """Shared fixtures and helpers for all test files."""
+
 from __future__ import annotations
 
 import json
@@ -20,6 +21,7 @@ _ENDPOINT = get_settings().rmes_endpoint
 # ---------------------------------------------------------------------------
 # Helpers: fake httpx responses
 # ---------------------------------------------------------------------------
+
 
 def _json_response(body: dict[str, Any], status: int = 200) -> httpx.Response:
     return httpx.Response(
@@ -57,6 +59,7 @@ def _out(call_tool_result) -> dict[str, Any]:
 # Fake httpx.AsyncClient
 # ---------------------------------------------------------------------------
 
+
 class FakeAsyncClient:
     """Drop-in replacement for httpx.AsyncClient."""
 
@@ -80,6 +83,7 @@ class FakeAsyncClient:
 # ---------------------------------------------------------------------------
 # Fixtures: RMES server & client
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def _fake_sparql_client():
@@ -112,6 +116,7 @@ def rmes_client(rmes_mcp: FastMCP) -> Client:
 # ---------------------------------------------------------------------------
 # Fixture: mock SPARQL endpoint
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def mock_sparql(_fake_sparql_client):

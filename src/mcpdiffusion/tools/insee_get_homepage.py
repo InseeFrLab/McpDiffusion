@@ -1,4 +1,5 @@
 """Tool: get_insee_homepage -- thin registration layer."""
+
 from __future__ import annotations
 
 from fastmcp import FastMCP
@@ -6,6 +7,7 @@ from fastmcp import FastMCP
 from ..config.tool_metadata import GET_HOMEPAGE
 from ..data.indicators import DICT_KV
 from ..models.insee import KeyIndicatorsOutput, KeyValueIndicator
+
 
 # Fixme: the tool contains no service which is kind of breaking the convention I saw earlier
 #   this correlates unit testing to the tool mechanics

@@ -35,8 +35,10 @@ Spell names out. The reader should not have to look up what something holds.
 
 ## Layout
 
-- Dicts, lists and other objects: multiline, one entry per line, including as call arguments.
-- Signatures and calls with two or more arguments: multiline, one per line.
+- Dicts, lists and other objects: multiline, one entry per line, including as call arguments. The
+  formatter collapses anything that fits on one line and never splits it for you — a **trailing comma
+  on the last entry** is what keeps it exploded, so write one.
+- Signatures and calls with two or more arguments: multiline, one per line, with the same trailing comma.
 - Calls with more than two arguments name each one. Positional only where keywords are forbidden
   (`getattr`, `dict`, `join`).
 - Imports at the top of the module, never inside a function.

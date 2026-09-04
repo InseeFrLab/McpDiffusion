@@ -10,6 +10,7 @@ Design notes:
 - Tool descriptions describe the *final* schemas; rewrite in lockstep
   when schemas change.
 """
+
 from datetime import date
 
 
@@ -77,8 +78,8 @@ SEARCH_DATASET = {
         "\n"
         "TIPS\n"
         "- Matching is lexical. Make `french_query` explicit and rich in French "
-        "synonyms: e.g. `\"indice des prix a la consommation\"`, "
-        "`\"deces par departement\"`, `\"prenoms des nouveau-nes\"`.\n"
+        'synonyms: e.g. `"indice des prix a la consommation"`, '
+        '`"deces par departement"`, `"prenoms des nouveau-nes"`.\n'
         "- Use `start_year` / `end_year` to narrow the temporal range. Leaving "
         "both at default covers all years.\n"
         "\n"
@@ -107,7 +108,7 @@ SEARCH_MODALITIES = {
         "\n"
         "INPUT\n"
         "- `dataset_id` -- from a previous search result.\n"
-        "- `columns_id` -- which columns to search (e.g. `[\"PRICES\", \"GEO\"]`).\n"
+        '- `columns_id` -- which columns to search (e.g. `["PRICES", "GEO"]`).\n'
         "- `french_query` -- natural-language query in French.\n"
         "\n"
         "OUTPUT\n"
@@ -143,7 +144,7 @@ GET_DOCUMENT = {
         "\n"
         "INPUT\n"
         "- `list_of_url` -- list of relative URLs to fetch (e.g. "
-        "`[\"/fr/statistiques/4277658?sommaire=4318291\"]`).\n"
+        '`["/fr/statistiques/4277658?sommaire=4318291"]`).\n'
         "- `include_sommaire` -- also parse the page's table-of-contents "
         "section. Use once to discover the structure of a multi-section "
         "publication, then turn it off for subsequent requests on the same page.\n"
@@ -218,14 +219,15 @@ SEARCH_DOCUMENTS = {
 SEARCH_CHIFFRECLEF = {
     "tool_name": "search_insee_chiffrecle",
     "tool_description": "Recherche EXCLUSIVE dans les Chiffres-clefs INSEE : donnees synthetiques, \n"
-                        "comparaisons regionales/departementales et statistiques factuelles simples.\n"
-                        "A utiliser EN PRIORITE pour : population, inflation, chomage, PIB, salaires, \n"
-                        "prix par categorie, comparaisons geographiques (region, departement, commune).\n"
-                        "A utiliser POUR LES CAS SIMPLES : 'Quelle est la population de X ?', 'Taux de chomage en 2024 ?', 'Inflation en juillet 2026 ?'\n"
-                        "A NE PAS utiliser pour : analyses detaillees, impacts/contexte, tendances \n"
-                        "complexes, donnees produit granulaires historiques (-> utiliser search_melodi_datasets \n"
-                        "ou search_insee_documents selon le contexte).\n"
-                        "Retourne directement les tableaux synthetiques prets a l'emploi.\n",
+    "comparaisons regionales/departementales et statistiques factuelles simples.\n"
+    "A utiliser EN PRIORITE pour : population, inflation, chomage, PIB, salaires, \n"
+    "prix par categorie, comparaisons geographiques (region, departement, commune).\n"
+    "A utiliser POUR LES CAS SIMPLES : 'Quelle est la population de X ?', "
+    "'Taux de chomage en 2024 ?', 'Inflation en juillet 2026 ?'\n"
+    "A NE PAS utiliser pour : analyses detaillees, impacts/contexte, tendances \n"
+    "complexes, donnees produit granulaires historiques (-> utiliser search_melodi_datasets \n"
+    "ou search_insee_documents selon le contexte).\n"
+    "Retourne directement les tableaux synthetiques prets a l'emploi.\n",
     "tool_metadata": {"version": "5.0", "author": "mirlon"},
 }
 
@@ -311,7 +313,7 @@ RMES_LIST_GRAPHS = {
         "avec un compteur et quelques URIs d'exemple par categorie -- pas la liste plate "
         "des 700+ graphes. Choisis une categorie precise dans le parametre `category` "
         "pour cibler une famille, ou utilise `contains` pour une recherche libre par "
-        "sous-chaine. Une categorie \"autre\" recueille tout graphe ne correspondant a "
+        'sous-chaine. Une categorie "autre" recueille tout graphe ne correspondant a '
         "aucune famille connue."
     ),
     "tool_metadata": {"version": "5.0", "author": "mirlon"},
@@ -342,7 +344,7 @@ RMES_RUN_SPARQL = {
         "Bonnes pratiques :\n"
         "- Toujours filtrer sur un ou plusieurs graphes precis avec GRAPH <uri> { ... } ou "
         "  VALUES ?g { <uri1> <uri2> } plutot que de scanner tous les graphes.\n"
-        "- Toujours ajouter FILTER(lang(?label) = \"fr\") sur les litteraux SKOS pour eviter "
+        '- Toujours ajouter FILTER(lang(?label) = "fr") sur les litteraux SKOS pour eviter '
         "  les doublons multilingues.\n"
         "- Une clause LIMIT est fortement recommandee ; si absente, `max_rows` est ajoutee "
         "  automatiquement (indique dans la reponse via `limit_added`/`hint`).\n"

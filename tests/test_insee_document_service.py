@@ -1,19 +1,19 @@
 """Unit tests for mcpdiffusion.services.insee_document."""
+
 from __future__ import annotations
 
 import httpx
 import pytest
 from fastmcp.exceptions import ToolError
-from mcpdiffusion.core.errors import fail
 
 from mcpdiffusion.config.settings import Settings
 from mcpdiffusion.models.insee import GetInseeDocumentInput
 from mcpdiffusion.services.insee_document import (
     _as_relative,
+    _fetch_html,
     _format_sommaire,
     _parse_sommaire,
     _truncate,
-    _fetch_html,
     get_insee_document,
 )
 from tests.conftest import FakeAsyncClient
@@ -24,6 +24,7 @@ _SETTINGS = Settings(INSEE_BASE_URL="https://www.insee.fr", _env_file=None)
 # ===================================================================
 # _as_relative
 # ===================================================================
+
 
 class TestAsRelative:
     def test_path_only(self):
@@ -40,6 +41,7 @@ class TestAsRelative:
 # ===================================================================
 # _truncate
 # ===================================================================
+
 
 class TestTruncate:
     def test_short_text_not_truncated(self):
@@ -71,6 +73,7 @@ class TestTruncate:
 # ===================================================================
 # _parse_sommaire
 # ===================================================================
+
 
 class TestParseSommaire:
     def test_empty_html_returns_empty(self):
@@ -131,6 +134,7 @@ class TestParseSommaire:
 # _format_sommaire
 # ===================================================================
 
+
 class TestFormatSommaire:
     def test_groups_by_category(self):
         items = [
@@ -154,11 +158,16 @@ class TestFormatSommaire:
 # _fetch_html
 # ===================================================================
 
+
 class TestFetchHtml:
     async def test_success_returns_html(self):
-        fake = FakeAsyncClient(lambda url, **kw: httpx.Response(
-            200, content=b"<html>OK</html>", request=httpx.Request("GET", url),
-        ))
+        fake = FakeAsyncClient(
+            lambda url, **kw: httpx.Response(
+                200,
+                content=b"<html>OK</html>",
+                request=httpx.Request("GET", url),
+            )
+        )
         result = await _fetch_html("/fr/stat/1", _SETTINGS, fake)
         assert result == "<html>OK</html>"
 
@@ -210,6 +219,7 @@ class TestFetchHtml:
 # get_insee_document
 # ===================================================================
 
+
 class TestGetInseeDocument:
     async def test_empty_url_list_raises(self):
         params = GetInseeDocumentInput(list_of_url=[])
@@ -222,7 +232,9 @@ class TestGetInseeDocument:
 
         params = GetInseeDocumentInput(list_of_url=["/fr/stat/1"])
         result = await get_insee_document(
-            params, http_client=FakeAsyncClient(handler), settings=_SETTINGS,
+            params,
+            http_client=FakeAsyncClient(handler),
+            settings=_SETTINGS,
         )
 
         assert result.count == 1
@@ -231,9 +243,13 @@ class TestGetInseeDocument:
 
     async def test_success_returns_markdown(self):
         html = "<html><body><article><p>Important paragraph.</p></article></body></html>"
-        fake = FakeAsyncClient(lambda url, **kw: httpx.Response(
-            200, content=html.encode(), request=httpx.Request("GET", url),
-        ))
+        fake = FakeAsyncClient(
+            lambda url, **kw: httpx.Response(
+                200,
+                content=html.encode(),
+                request=httpx.Request("GET", url),
+            )
+        )
         params = GetInseeDocumentInput(
             list_of_url=["/fr/stat/1"],
             include_sommaire=False,
@@ -246,10 +262,13 @@ class TestGetInseeDocument:
         assert result.results[0].error is None
 
     async def test_multiple_urls(self):
-        fake = FakeAsyncClient(lambda url, **kw: httpx.Response(
-            200, content=b"<html><body><p>Content</p></body></html>",
-            request=httpx.Request("GET", url),
-        ))
+        fake = FakeAsyncClient(
+            lambda url, **kw: httpx.Response(
+                200,
+                content=b"<html><body><p>Content</p></body></html>",
+                request=httpx.Request("GET", url),
+            )
+        )
         params = GetInseeDocumentInput(
             list_of_url=["/fr/stat/1", "/fr/stat/2"],
             include_sommaire=False,
@@ -264,7 +283,8 @@ class TestGetInseeDocument:
             call_count[0] += 1
             if call_count[0] == 1:
                 return httpx.Response(
-                    200, content=b"<html><body><p>OK</p></body></html>",
+                    200,
+                    content=b"<html><body><p>OK</p></body></html>",
                     request=httpx.Request("GET", url),
                 )
             raise httpx.TimeoutException("timed out")
@@ -274,7 +294,9 @@ class TestGetInseeDocument:
             include_sommaire=False,
         )
         result = await get_insee_document(
-            params, http_client=FakeAsyncClient(handler), settings=_SETTINGS,
+            params,
+            http_client=FakeAsyncClient(handler),
+            settings=_SETTINGS,
         )
         assert result.count == 2
         assert result.results[0].status == "success"

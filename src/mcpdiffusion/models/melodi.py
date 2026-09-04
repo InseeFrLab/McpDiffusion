@@ -1,12 +1,13 @@
 """Pydantic schemas for Melodi tools."""
+
 from __future__ import annotations
 
 from typing import Any
 
 from pydantic import BaseModel, Field
 
-
 # --- get_melodi_observations ---
+
 
 class GetMelodiObservationsInput(BaseModel):
     dataset_id: str = Field(
@@ -51,6 +52,7 @@ class GetMelodiObservationsOutput(BaseModel):
 
 # --- search_melodi_datasets ---
 
+
 class SearchMelodiDatasetsInput(BaseModel):
     french_query: str = Field(
         description=(
@@ -91,10 +93,7 @@ class DatasetDescription(BaseModel):
 class DatasetSearchResult(BaseModel):
     dataset_id: str
     dataset_columns: str = Field(
-        description=(
-            "Pipe-separated list of available columns formatted as "
-            "'COLUMN_ID Label'."
-        )
+        description=("Pipe-separated list of available columns formatted as 'COLUMN_ID Label'.")
     )
     dataset_description: DatasetDescription
     dataset_score: float
@@ -105,6 +104,7 @@ class SearchMelodiDatasetsOutput(BaseModel):
 
 
 # --- search_melodi_modalities ---
+
 
 class SearchMelodiModalitiesInput(BaseModel):
     dataset_id: str = Field(

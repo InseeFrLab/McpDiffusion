@@ -74,7 +74,8 @@ DICT_THEME_CONJ: dict[str, list[str]] = {
         "Les inscrits a France Travail",
     ],
     "Wages and labour costs": [
-        "Indice du cout horaire du travail revise - Tous salaries (ICHT, ICHTrev-TS) - Publication arretee depuis le 06/10/2023",
+        "Indice du cout horaire du travail revise - Tous salaries (ICHT, ICHTrev-TS)"
+        " - Publication arretee depuis le 06/10/2023",
         "Indice du cout du travail (ICT) - Resultats detailles",
         "Indice du cout du travail (ICT) - Estimation flash",
         "Salaires de base - Comparaison France-Allemagne",

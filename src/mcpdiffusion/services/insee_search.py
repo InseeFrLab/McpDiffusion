@@ -3,6 +3,7 @@
 Centralizes query building, collection filtering, and search execution
 for search_insee_documents, search_insee_conjoncture, and search_insee_chiffrecle.
 """
+
 from __future__ import annotations
 
 from collections.abc import Iterable
@@ -25,7 +26,7 @@ def _coerce_hit_value(value) -> str | None:
     return str(value)
 
 
-# Build query 
+# Build query
 def build_text_clauses(
     query: str | None,
     year_of_reference: int | None,
@@ -52,9 +53,7 @@ def build_text_clauses(
                 fuzziness="AUTO",
             )
         )
-        should.append(
-            Q("match_phrase", titre={"query": query, "boost": 1})
-        )
+        should.append(Q("match_phrase", titre={"query": query, "boost": 1}))
 
     if year_of_reference:
         filters.append(
@@ -96,9 +95,7 @@ def apply_collection_filters(
     if must_only_rapides:
         filters.append(Q("term", collection_libelle="Informations rapides"))
     elif must_not_rapides:
-        filters.append(
-            Q("bool", must_not=[Q("term", collection_libelle="Informations rapides")])
-        )
+        filters.append(Q("bool", must_not=[Q("term", collection_libelle="Informations rapides")]))
 
     # Fixme: the 1st check seems useless
     if theme and theme != "ALL":
@@ -127,13 +124,13 @@ def apply_collection_filters(
                 fuzziness="AUTO",
             )
         )
-        should.append(
-            Q("match_phrase", zone={"query": geo_keyword, "boost": 5})
-        )
+        should.append(Q("match_phrase", zone={"query": geo_keyword, "boost": 5}))
 
     return filters, should
 
-# Execute search with built query 
+
+# Execute search with built query
+
 
 async def execute_search(
     *,

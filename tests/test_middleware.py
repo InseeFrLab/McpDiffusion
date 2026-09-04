@@ -1,7 +1,8 @@
 """Unit tests for mcpdiffusion.core.middleware (RateLimitMiddleware)."""
+
 from __future__ import annotations
 
-import pytest
+from mcpdiffusion.core.middleware import RateLimitMiddleware
 from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.responses import PlainTextResponse
@@ -9,12 +10,11 @@ from starlette.routing import Route
 from starlette.testclient import TestClient
 
 from mcpdiffusion.config.settings import Settings
-from mcpdiffusion.core.middleware import RateLimitMiddleware
-
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_app(rate_limit: int = 3) -> Starlette:
     """Create a minimal Starlette app with a DI-configured RateLimitMiddleware."""
@@ -35,6 +35,7 @@ def _make_app(rate_limit: int = 3) -> Starlette:
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
 
 class TestRateLimitAllowed:
     """Requests within the limit should pass through normally."""
@@ -109,10 +110,12 @@ class TestRateLimitPerIP:
             TZ="Europe/Paris",
             _env_file=None,
         )
-        app = Starlette(routes=[
-            Route("/a", lambda r: PlainTextResponse("a")),
-            Route("/b", lambda r: PlainTextResponse("b")),
-        ])
+        app = Starlette(
+            routes=[
+                Route("/a", lambda r: PlainTextResponse("a")),
+                Route("/b", lambda r: PlainTextResponse("b")),
+            ]
+        )
         app.add_middleware(RateLimitMiddleware, settings=settings)
         client = TestClient(app)
 

@@ -1,4 +1,5 @@
 """Tool: RMES_describe_resource -- thin registration layer."""
+
 from __future__ import annotations
 
 from fastmcp import Context, FastMCP

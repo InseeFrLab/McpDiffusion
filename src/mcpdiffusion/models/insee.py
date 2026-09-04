@@ -1,8 +1,8 @@
 """Pydantic schemas for INSEE.fr tools."""
+
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -52,32 +52,27 @@ class ThemeConjoncture(StrEnum):
 
 # --- Shared output model ---
 
+
 class DocumentHit(BaseModel):
     """Whitelisted publication record returned by INSEE.fr search tools."""
+
     id: str = Field(description="Elasticsearch document id.")
     score: float = Field(description="Relevance score from Elasticsearch.")
-    titre: Optional[str] = None
-    soustitre: Optional[str] = None
-    chapo: Optional[str] = None
-    anneediffusion: Optional[str] = Field(
-        default=None, description="Publication year as indexed."
-    )
-    zone: Optional[str] = Field(
-        default=None, description="Geographic zone (e.g. 'France', 'Bretagne')."
-    )
-    theme: Optional[str] = None
-    collection_libelle: Optional[str] = Field(
+    titre: str | None = None
+    soustitre: str | None = None
+    chapo: str | None = None
+    anneediffusion: str | None = Field(default=None, description="Publication year as indexed.")
+    zone: str | None = Field(default=None, description="Geographic zone (e.g. 'France', 'Bretagne').")
+    theme: str | None = None
+    collection_libelle: str | None = Field(
         default=None,
-        description="Collection the publication belongs to "
-                    "(e.g. 'Insee Premiere', 'Informations rapides').",
+        description="Collection the publication belongs to (e.g. 'Insee Premiere', 'Informations rapides').",
     )
-    idproduit: Optional[str] = Field(
+    idproduit: str | None = Field(
         default=None,
         description="INSEE product identifier (often equal to the ES id).",
     )
-    url: str = Field(
-        description="Relative URL ready to feed into `get_insee_document`."
-    )
+    url: str = Field(description="Relative URL ready to feed into `get_insee_document`.")
 
 
 # --- search_insee_documents ---
@@ -91,18 +86,15 @@ class SearchInseeDocumentsInput(BaseModel):
         default=INSEETheme.ALL,
         description="Optional top-level INSEE theme used to restrict the search. Default: ALL.",
     )
-    year_of_reference: Optional[int] = Field(
+    year_of_reference: int | None = Field(
         default=None,
-        description=(
-            "Hard filter on publication year (e.g. 2024). Leave null to "
-            "search all years."
-        ),
+        description=("Hard filter on publication year (e.g. 2024). Leave null to search all years."),
     )
     geo_niveau: INSEEGeo = Field(
         default=INSEEGeo.FRANCE,
         description="Geographic level to search. Codes: COM / DEP / REG / INTER / COMPRD / FRANCE.",
     )
-    geo_keyword: Optional[str] = Field(
+    geo_keyword: str | None = Field(
         default=None,
         description=(
             "Geographic name to filter on (e.g. 'Paris', 'Occitanie', "
@@ -118,6 +110,7 @@ class SearchInseeDocumentsInput(BaseModel):
         le=20,
     )
 
+
 # Fixme: the same model shape is used 3 times
 class SearchInseeDocumentsOutput(BaseModel):
     results: list[DocumentHit]
@@ -126,23 +119,21 @@ class SearchInseeDocumentsOutput(BaseModel):
 
 # --- search_insee_chiffrecle ---
 
+
 class SearchInseeChiffrecleInput(BaseModel):
     query: str = Field(
         description="Natural-language search query describing the statistics to retrieve.",
         examples=["population de Lyon", "taux de chomage 2024", "PIB France"],
     )
-    year_of_reference: Optional[int] = Field(
+    year_of_reference: int | None = Field(
         default=None,
-        description=(
-            "Hard filter on publication year (e.g. 2024). Leave null to "
-            "search all years."
-        ),
+        description=("Hard filter on publication year (e.g. 2024). Leave null to search all years."),
     )
     geo_niveau: INSEEGeo = Field(
         default=INSEEGeo.FRANCE,
         description="Geographic level to search. Codes: COM / DEP / REG / INTER / COMPRD / FRANCE.",
     )
-    geo_keyword: Optional[str] = Field(
+    geo_keyword: str | None = Field(
         default=None,
         description=(
             "Geographic name to filter on (e.g. 'Paris', 'Occitanie', "
@@ -164,6 +155,7 @@ class SearchInseeChiffrecleOutput(BaseModel):
 
 # --- search_insee_conjoncture ---
 
+
 class SearchInseeConjonctureInput(BaseModel):
     query: str = Field(
         description=(
@@ -172,14 +164,14 @@ class SearchInseeConjonctureInput(BaseModel):
         ),
         examples=["consommation", "hotel", "PIB"],
     )
-    theme_conjoncture: Optional[ThemeConjoncture] = Field(
+    theme_conjoncture: ThemeConjoncture | None = Field(
         default=None,
         description=(
             "Optional broad category to restrict the search. Each category "
             "contains multiple sub-themes. Leave null to search across all."
         ),
     )
-    year_of_reference: Optional[int] = Field(
+    year_of_reference: int | None = Field(
         default=None,
         description=(
             "Hard filter on publication year (e.g. 2024). Leave null to "
@@ -202,12 +194,10 @@ class SearchInseeConjonctureOutput(BaseModel):
 
 # --- get_insee_document ---
 
+
 class GetInseeDocumentInput(BaseModel):
     list_of_url: list[str] = Field(
-        description=(
-            "List of relative URLs to retrieve (e.g. "
-            "'/fr/statistiques/4277658?sommaire=4318291')."
-        ),
+        description=("List of relative URLs to retrieve (e.g. '/fr/statistiques/4277658?sommaire=4318291')."),
         examples=[["/fr/statistiques/4277658?sommaire=4318291"]],
     )
     include_sommaire: bool = Field(
@@ -231,8 +221,8 @@ class GetInseeDocumentInput(BaseModel):
 class DocumentResult(BaseModel):
     id: str = Field(description="The input URL that produced this entry.")
     status: str = Field(description="'success' or 'error'.")
-    markdown_content: Optional[str] = None
-    sommaire: Optional[dict[str, dict[str, str]]] = Field(
+    markdown_content: str | None = None
+    sommaire: dict[str, dict[str, str]] | None = Field(
         default=None,
         description=(
             "Parsed table of contents as "
@@ -244,7 +234,7 @@ class DocumentResult(BaseModel):
         default=False,
         description="True if markdown_content was clipped due to size.",
     )
-    error: Optional[str] = Field(
+    error: str | None = Field(
         default=None,
         description="Human-readable error message when status == 'error'.",
     )
@@ -257,15 +247,14 @@ class GetInseeDocumentOutput(BaseModel):
 
 # --- get_insee_homepage ---
 
+
 class KeyValueIndicator(BaseModel):
     key: str = Field(description="Indicator name (e.g. 'smic', 'PIB annuel').")
     alias: str = Field(
         default="",
         description="Optional alias / alternative name for the indicator.",
     )
-    value: str = Field(
-        description="Pre-computed textual description of the latest figure."
-    )
+    value: str = Field(description="Pre-computed textual description of the latest figure.")
 
 
 class KeyIndicatorsOutput(BaseModel):

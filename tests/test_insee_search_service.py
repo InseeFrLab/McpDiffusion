@@ -1,4 +1,5 @@
 """Unit tests for mcpdiffusion.services.insee_search (pure logic, no ES)."""
+
 from __future__ import annotations
 
 from mcpdiffusion.services.insee_search import (
@@ -7,10 +8,10 @@ from mcpdiffusion.services.insee_search import (
     build_text_clauses,
 )
 
-
 # ===================================================================
 # _coerce_hit_value
 # ===================================================================
+
 
 class TestCoerceHitValue:
     def test_none_returns_none(self):
@@ -35,6 +36,7 @@ class TestCoerceHitValue:
 # ===================================================================
 # build_text_clauses
 # ===================================================================
+
 
 class TestBuildTextClauses:
     def test_no_arguments_returns_empty_lists(self):
@@ -61,7 +63,9 @@ class TestBuildTextClauses:
 
     def test_keywords_add_should_clauses(self):
         must, filters, should, must_not = build_text_clauses(
-            None, None, keywords=["eco", "stats"],
+            None,
+            None,
+            keywords=["eco", "stats"],
         )
         assert len(should) == 2
 
@@ -71,7 +75,9 @@ class TestBuildTextClauses:
 
     def test_query_with_keywords(self):
         must, filters, should, must_not = build_text_clauses(
-            "chomage", None, keywords=["emploi"],
+            "chomage",
+            None,
+            keywords=["emploi"],
         )
         assert len(must) == 1
         assert len(should) == 2  # match_phrase + keyword
@@ -81,77 +87,111 @@ class TestBuildTextClauses:
 # apply_collection_filters
 # ===================================================================
 
+
 class TestApplyCollectionFilters:
     def test_must_only_rapides(self):
         filters, should = apply_collection_filters(
-            [], must_not_rapides=False, must_only_rapides=True,
+            [],
+            must_not_rapides=False,
+            must_only_rapides=True,
         )
         assert len(filters) == 1
 
     def test_must_not_rapides(self):
         filters, should = apply_collection_filters(
-            [], must_not_rapides=True, must_only_rapides=False,
+            [],
+            must_not_rapides=True,
+            must_only_rapides=False,
         )
         assert len(filters) == 1
 
     def test_no_rapides_filter_when_both_false(self):
         filters, should = apply_collection_filters(
-            [], must_not_rapides=False, must_only_rapides=False,
+            [],
+            must_not_rapides=False,
+            must_only_rapides=False,
         )
         assert filters == []
         assert should == []
 
     def test_chiffre_clef_adds_filter(self):
         filters, should = apply_collection_filters(
-            [], must_not_rapides=False, must_only_rapides=False, chiffre_clef=True,
+            [],
+            must_not_rapides=False,
+            must_only_rapides=False,
+            chiffre_clef=True,
         )
         assert len(filters) == 1
 
     def test_valid_theme_adds_filter(self):
         filters, should = apply_collection_filters(
-            [], must_not_rapides=False, must_only_rapides=False, theme="Demographie",
+            [],
+            must_not_rapides=False,
+            must_only_rapides=False,
+            theme="Demographie",
         )
         assert len(filters) == 1
 
     def test_theme_all_ignored(self):
         filters, should = apply_collection_filters(
-            [], must_not_rapides=False, must_only_rapides=False, theme="ALL",
+            [],
+            must_not_rapides=False,
+            must_only_rapides=False,
+            theme="ALL",
         )
         assert filters == []
 
     def test_unknown_theme_ignored(self):
         filters, should = apply_collection_filters(
-            [], must_not_rapides=False, must_only_rapides=False, theme="NotATheme",
+            [],
+            must_not_rapides=False,
+            must_only_rapides=False,
+            theme="NotATheme",
         )
         assert filters == []
 
     def test_valid_geo_niveau(self):
         filters, should = apply_collection_filters(
-            [], must_not_rapides=False, must_only_rapides=False, geo_niveau="COMMUNE",
+            [],
+            must_not_rapides=False,
+            must_only_rapides=False,
+            geo_niveau="COMMUNE",
         )
         assert len(filters) == 1
 
     def test_unknown_geo_niveau_ignored(self):
         filters, should = apply_collection_filters(
-            [], must_not_rapides=False, must_only_rapides=False, geo_niveau="MARS",
+            [],
+            must_not_rapides=False,
+            must_only_rapides=False,
+            geo_niveau="MARS",
         )
         assert filters == []
 
     def test_geo_keyword_adds_two_should_clauses(self):
         filters, should = apply_collection_filters(
-            [], must_not_rapides=False, must_only_rapides=False, geo_keyword="Paris",
+            [],
+            must_not_rapides=False,
+            must_only_rapides=False,
+            geo_keyword="Paris",
         )
         assert len(should) == 2
 
     def test_geo_keyword_all_ignored(self):
         filters, should = apply_collection_filters(
-            [], must_not_rapides=False, must_only_rapides=False, geo_keyword="all",
+            [],
+            must_not_rapides=False,
+            must_only_rapides=False,
+            geo_keyword="all",
         )
         assert should == []
 
     def test_geo_keyword_all_case_insensitive(self):
         filters, should = apply_collection_filters(
-            [], must_not_rapides=False, must_only_rapides=False, geo_keyword="ALL",
+            [],
+            must_not_rapides=False,
+            must_only_rapides=False,
+            geo_keyword="ALL",
         )
         assert should == []
 

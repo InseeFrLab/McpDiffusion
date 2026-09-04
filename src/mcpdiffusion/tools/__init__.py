@@ -4,24 +4,28 @@ Each tool module exposes a `register_xxx(mcp: FastMCP)` function. This file
 wires all of them in one place; to disable a tool, comment out its import
 and the corresponding call below.
 """
+
 from __future__ import annotations
 
 from fastmcp import FastMCP
 
 from ..config.settings import Settings
 
+# Imported but never registered: send_feedback is not exposed. Decide whether to wire it up or
+# drop it, then remove this import or the noqa.
+from .extras_send_feedback import register_extras_send_feedback  # noqa: F401
+from .insee_get_document import register_get_insee_document
+from .insee_get_homepage import register_get_insee_homepage
+from .insee_search_chiffrecle import register_search_insee_chiffreclef
+from .insee_search_conjoncture import register_search_insee_conjoncture
+from .insee_search_documents import register_search_insee_documents
 from .melodi_get_observations import register_get_melodi_observations
 from .melodi_search_datasets import register_search_melodi_datasets
 from .melodi_search_modalities import register_search_melodi_modalities
-from .insee_get_document import register_get_insee_document
-from .insee_get_homepage import register_get_insee_homepage
-from .insee_search_documents import register_search_insee_documents
-from .insee_search_conjoncture import register_search_insee_conjoncture
-from .insee_search_chiffrecle import register_search_insee_chiffreclef
-from .rmes_list_graphs import register_rmes_list_graphs
 from .rmes_describe_resource import register_rmes_describe_resource
+from .rmes_list_graphs import register_rmes_list_graphs
 from .rmes_run_sparql import register_rmes_run_sparql
-from .extras_send_feedback import register_extras_send_feedback
+
 
 # Fixme: there might be better pattern instead of iterating with if statements on tool groups
 def register_tools(mcp: FastMCP, settings: Settings) -> None:

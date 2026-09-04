@@ -1,4 +1,5 @@
 """Tool: RMES_run_sparql -- thin registration layer."""
+
 from __future__ import annotations
 
 from fastmcp import Context, FastMCP
@@ -16,18 +17,18 @@ def register_rmes_run_sparql(mcp: FastMCP, *, endpoint: str) -> None:
         #  the service plus a hardoded description
         # Fixme: this is also not the right place for a query
         description=RMES_RUN_SPARQL["tool_description"] + "\n" + KNOWN_VOCABULARIES_NOTE + "\n\n"
-        "Exemple -- recherche de codes NAF contenant \"extraction\" :\n"
+        'Exemple -- recherche de codes NAF contenant "extraction" :\n'
         "PREFIX skos: <http://www.w3.org/2004/02/skos/core#>\n"
         "SELECT ?s ?label WHERE {\n"
         "  GRAPH <http://rdf.insee.fr/graphes/codes/naf2025> {\n"
         "    ?s skos:prefLabel ?label .\n"
-        "    FILTER(lang(?label) = \"fr\")\n"
-        "    FILTER(CONTAINS(LCASE(STR(?label)), \"extraction\"))\n"
+        '    FILTER(lang(?label) = "fr")\n'
+        '    FILTER(CONTAINS(LCASE(STR(?label)), "extraction"))\n'
         "  }\n"
         "} LIMIT 10\n"
         "\n"
-        "Les requetes CONSTRUCT/DESCRIBE renvoient du Turtle (`format=\"turtle\"`, champ `turtle`) "
-        "plutot que des lignes (`format=\"json\"`, champs `variables`/`bindings`).",
+        'Les requetes CONSTRUCT/DESCRIBE renvoient du Turtle (`format="turtle"`, champ `turtle`) '
+        'plutot que des lignes (`format="json"`, champs `variables`/`bindings`).',
         meta=RMES_RUN_SPARQL["tool_metadata"],
     )
     async def run_sparql_tool(params: RunSparqlInput, ctx: Context) -> RunSparqlOutput:

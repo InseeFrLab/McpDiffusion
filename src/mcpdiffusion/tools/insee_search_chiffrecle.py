@@ -1,4 +1,5 @@
 """Tool: search_insee_chiffrecle -- thin registration layer."""
+
 from __future__ import annotations
 
 from elasticsearch import ConnectionError as ESConnectionError
@@ -17,6 +18,7 @@ from ..services.insee_search import (
     build_text_clauses,
     execute_search,
 )
+
 
 # Fixme: the orchestration present in that function belongs in a service
 #   Indeed, the approach from one tool to another is inconsistent
@@ -58,8 +60,7 @@ def register_search_insee_chiffreclef(mcp: FastMCP, *, index: str) -> None:
         except (ESConnectionError, TransportError) as exc:
             raise AppToolError(
                 "BACKEND_UNAVAILABLE",
-                f"INSEE documents search backend unreachable: {exc}. "
-                "Verify ES_HOST and try again.",
+                f"INSEE documents search backend unreachable: {exc}. Verify ES_HOST and try again.",
                 retryable=True,
             )
         return SearchInseeChiffrecleOutput(results=hits, count=len(hits))

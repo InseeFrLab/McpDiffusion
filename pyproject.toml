@@ -28,7 +28,31 @@ packages = ["src/mcpdiffusion"]
 dev = [
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4.0",
+    "pre-commit>=4.5.1",
+    "ruff>=0.15.4",
 ]
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+# B904 is off: Python keeps the original exception either way, so `raise ... from exc` only changes the
+# wording in a traceback. include_traceback on ErrorHandlingMiddleware is what makes causes recoverable.
+ignore = ["B904"]
+select = [
+    "E", # pycodestyle errors
+    "F", # pyflakes
+    "I", # isort
+    "B", # flake8-bugbear - catches common bug patterns
+    "UP", # pyupgrade - enforces modern syntax, including `str | None` over `Optional[str]`
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Long literal statistics, pending replacement by a live source.
+"src/mcpdiffusion/data/indicators.py" = ["E501"]
+
+[tool.ruff.format]
+docstring-code-format = true
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

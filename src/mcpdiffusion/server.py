@@ -43,10 +43,13 @@ register_tools(mcp, settings)
 # None of them logs how many results a tool returned. If empty results become hard to diagnose, add an
 # `on_call_tool` middleware that inspects the ToolResult, or have the tool report it with `ctx.info`.
 mcp.add_middleware(
-    # transform_errors would promote our ToolErrors to JSON-RPC protocol errors labelled
-    # "Internal error", losing is_error and the message the LLM is meant to act on. We only
-    # want the logging and error counting.
-    ErrorHandlingMiddleware(transform_errors=False),
+    # include_traceback puts the original cause in the server log, which is the only place it is
+    # recoverable. transform_errors would promote our ToolErrors to JSON-RPC protocol errors labelled
+    # "Internal error", losing is_error and the message the caller is meant to act on.
+    ErrorHandlingMiddleware(
+        transform_errors=False,
+        include_traceback=True,
+    ),
 )
 mcp.add_middleware(
     SlidingWindowRateLimitingMiddleware(

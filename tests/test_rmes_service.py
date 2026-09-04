@@ -1,4 +1,5 @@
 """Unit tests for mcpdiffusion.services.rmes (pure logic, no MCP layer)."""
+
 from __future__ import annotations
 
 import time
@@ -22,10 +23,10 @@ from mcpdiffusion.services.rmes import (
 )
 from tests.conftest import FakeAsyncClient, _json_response
 
-
 # ===================================================================
 # _detect_query_form
 # ===================================================================
+
 
 class TestDetectQueryForm:
     def test_select(self):
@@ -53,10 +54,7 @@ class TestDetectQueryForm:
         assert _detect_query_form(query) == "SELECT"
 
     def test_prefix_containing_select_keyword(self):
-        query = (
-            "PREFIX select: <http://example.org/select#>\n"
-            "ASK { ?s select:prop ?o }"
-        )
+        query = "PREFIX select: <http://example.org/select#>\nASK { ?s select:prop ?o }"
         assert _detect_query_form(query) == "ASK"
 
     def test_unknown_form(self):
@@ -72,6 +70,7 @@ class TestDetectQueryForm:
 # ===================================================================
 # _ensure_limit
 # ===================================================================
+
 
 class TestEnsureLimit:
     def test_adds_limit_to_select_without_limit(self):
@@ -121,6 +120,7 @@ class TestEnsureLimit:
 # _accept_header
 # ===================================================================
 
+
 class TestAcceptHeader:
     def test_select_returns_json(self):
         assert _accept_header("SELECT") == "application/sparql-results+json"
@@ -139,6 +139,7 @@ class TestAcceptHeader:
 # _relative_path
 # ===================================================================
 
+
 class TestRelativePath:
     def test_strips_graph_base(self):
         assert _relative_path(f"{GRAPH_BASE}codes/naf2025") == "codes/naf2025"
@@ -151,6 +152,7 @@ class TestRelativePath:
 # ===================================================================
 # _categorize
 # ===================================================================
+
 
 class TestCategorize:
     def test_nomenclature(self):
@@ -225,6 +227,7 @@ class TestCategorize:
 # _error_payload
 # ===================================================================
 
+
 class TestErrorPayload:
     def test_basic_payload(self):
         result = _error_payload(SparqlErrorType.TIMEOUT, "timed out", "SELECT 1")
@@ -235,7 +238,9 @@ class TestErrorPayload:
 
     def test_extra_fields(self):
         result = _error_payload(
-            SparqlErrorType.SYNTAX_ERROR, "bad", "SELECT",
+            SparqlErrorType.SYNTAX_ERROR,
+            "bad",
+            "SELECT",
             endpoint_message="parse error at line 1",
         )
         assert result["error"]["endpoint_message"] == "parse error at line 1"
@@ -245,13 +250,17 @@ class TestErrorPayload:
 # _execute_sparql (async, mocked HTTP via DI)
 # ===================================================================
 
+
 class TestExecuteSparql:
     async def test_unknown_form_returns_error_without_http_call(self):
         called = []
         fake = FakeAsyncClient(lambda url, **kw: called.append(1) or _json_response({}))
 
         result = await _execute_sparql(
-            "INSERT DATA { <s> <p> <o> }", timeout=10, max_rows=100, sparql_client=fake,
+            "INSERT DATA { <s> <p> <o> }",
+            timeout=10,
+            max_rows=100,
+            sparql_client=fake,
         )
 
         assert "error" in result
@@ -263,7 +272,10 @@ class TestExecuteSparql:
         fake = FakeAsyncClient(lambda url, **kw: _json_response(body))
 
         result = await _execute_sparql(
-            "SELECT ?x WHERE { ?x ?p ?o } LIMIT 1", timeout=10, max_rows=100, sparql_client=fake,
+            "SELECT ?x WHERE { ?x ?p ?o } LIMIT 1",
+            timeout=10,
+            max_rows=100,
+            sparql_client=fake,
         )
 
         assert "error" not in result
@@ -274,7 +286,10 @@ class TestExecuteSparql:
         fake = FakeAsyncClient(lambda url, **kw: _json_response(body))
 
         result = await _execute_sparql(
-            "SELECT ?x WHERE { ?x ?p ?o }", timeout=10, max_rows=50, sparql_client=fake,
+            "SELECT ?x WHERE { ?x ?p ?o }",
+            timeout=10,
+            max_rows=50,
+            sparql_client=fake,
         )
 
         assert result["_meta"]["limit_added"] == 50
@@ -282,13 +297,19 @@ class TestExecuteSparql:
 
     async def test_construct_returns_turtle(self):
         turtle = "<http://a> <http://b> <http://c> ."
-        fake = FakeAsyncClient(lambda url, **kw: httpx.Response(
-            200, content=turtle.encode(), headers={"content-type": "text/turtle"},
-            request=httpx.Request("POST", url),
-        ))
+        fake = FakeAsyncClient(
+            lambda url, **kw: httpx.Response(
+                200,
+                content=turtle.encode(),
+                headers={"content-type": "text/turtle"},
+                request=httpx.Request("POST", url),
+            )
+        )
 
         result = await _execute_sparql(
-            "CONSTRUCT { ?s ?p ?o } WHERE { ?s ?p ?o } LIMIT 1", timeout=10, max_rows=100,
+            "CONSTRUCT { ?s ?p ?o } WHERE { ?s ?p ?o } LIMIT 1",
+            timeout=10,
+            max_rows=100,
             sparql_client=fake,
         )
 
@@ -302,7 +323,10 @@ class TestExecuteSparql:
         fake = FakeAsyncClient(handler)
 
         result = await _execute_sparql(
-            "SELECT ?x WHERE { ?x ?p ?o }", timeout=5, max_rows=100, sparql_client=fake,
+            "SELECT ?x WHERE { ?x ?p ?o }",
+            timeout=5,
+            max_rows=100,
+            sparql_client=fake,
         )
 
         assert result["error"]["type"] == SparqlErrorType.TIMEOUT
@@ -327,7 +351,10 @@ class TestExecuteSparql:
         fake = FakeAsyncClient(handler)
 
         result = await _execute_sparql(
-            "SELECT ?x WHERE { ?x ?p ?o }", timeout=10, max_rows=100, sparql_client=fake,
+            "SELECT ?x WHERE { ?x ?p ?o }",
+            timeout=10,
+            max_rows=100,
+            sparql_client=fake,
         )
 
         assert result["error"]["type"] == SparqlErrorType.HTTP_ERROR
@@ -339,7 +366,10 @@ class TestExecuteSparql:
         fake = FakeAsyncClient(handler)
 
         result = await _execute_sparql(
-            "SELECT ?x WHERE { ?x ?p ?o }", timeout=10, max_rows=100, sparql_client=fake,
+            "SELECT ?x WHERE { ?x ?p ?o }",
+            timeout=10,
+            max_rows=100,
+            sparql_client=fake,
         )
 
         assert result["error"]["type"] == SparqlErrorType.NETWORK_ERROR
@@ -348,6 +378,7 @@ class TestExecuteSparql:
 # ===================================================================
 # _get_raw_graph_rows (async, mocked HTTP + cache)
 # ===================================================================
+
 
 class TestGetRawGraphRows:
     @pytest.fixture(autouse=True)
@@ -359,9 +390,11 @@ class TestGetRawGraphRows:
     async def test_returns_rows_on_success(self):
         body = {
             "head": {"vars": ["g", "nbTriples"]},
-            "results": {"bindings": [
-                {"g": {"value": "http://rdf.insee.fr/graphes/codes/naf2025"}, "nbTriples": {"value": "100"}},
-            ]},
+            "results": {
+                "bindings": [
+                    {"g": {"value": "http://rdf.insee.fr/graphes/codes/naf2025"}, "nbTriples": {"value": "100"}},
+                ]
+            },
         }
         fake = FakeAsyncClient(lambda url, **kw: _json_response(body))
 
@@ -386,9 +419,11 @@ class TestGetRawGraphRows:
         call_count = []
         body = {
             "head": {"vars": ["g", "nbTriples"]},
-            "results": {"bindings": [
-                {"g": {"value": "http://rdf.insee.fr/graphes/geo/cog"}, "nbTriples": {"value": "50"}},
-            ]},
+            "results": {
+                "bindings": [
+                    {"g": {"value": "http://rdf.insee.fr/graphes/geo/cog"}, "nbTriples": {"value": "50"}},
+                ]
+            },
         }
 
         def handler(url, **kw):
@@ -406,9 +441,11 @@ class TestGetRawGraphRows:
     async def test_cache_expires_after_ttl(self):
         body = {
             "head": {"vars": ["g", "nbTriples"]},
-            "results": {"bindings": [
-                {"g": {"value": "http://rdf.insee.fr/graphes/foo"}, "nbTriples": {"value": "1"}},
-            ]},
+            "results": {
+                "bindings": [
+                    {"g": {"value": "http://rdf.insee.fr/graphes/foo"}, "nbTriples": {"value": "1"}},
+                ]
+            },
         }
         call_count = []
 

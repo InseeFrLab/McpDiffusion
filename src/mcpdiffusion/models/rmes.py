@@ -1,11 +1,11 @@
 """Pydantic schemas for RMES (SPARQL) tools."""
+
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import Any, Literal, Optional
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
-
 
 # --- Shared RMES constants exposed to tools ---
 
@@ -19,6 +19,7 @@ GRAPH_BASE = "http://rdf.insee.fr/graphes/"
 
 
 # --- Graph taxonomy ---
+
 
 class GraphCategoryChoice(StrEnum):
     ALL = "ALL"
@@ -44,8 +45,9 @@ class GraphRow(BaseModel):
 
 # --- RMES_list_graphs ---
 
+
 class ListGraphsInput(BaseModel):
-    contains: Optional[str] = Field(
+    contains: str | None = Field(
         default=None,
         description=(
             "Filtre les graphes dont l'URI contient cette sous-chaine (insensible a la "
@@ -75,7 +77,7 @@ class CategoryBucket(BaseModel):
     count: int
     total_triples: int
     examples: list[str]
-    graphs: Optional[list[GraphRow]] = None
+    graphs: list[GraphRow] | None = None
 
 
 class ListGraphsOutput(BaseModel):
@@ -84,6 +86,7 @@ class ListGraphsOutput(BaseModel):
 
 
 # --- RMES_describe_resource ---
+
 
 class DescribeResourceInput(BaseModel):
     uri: str = Field(
@@ -105,8 +108,8 @@ class ResourceProperty(BaseModel):
     direction: Literal["outgoing", "incoming"]
     predicate: str
     value: str
-    value_type: Optional[str] = None
-    lang: Optional[str] = None
+    value_type: str | None = None
+    lang: str | None = None
 
 
 class DescribeResourceOutput(BaseModel):
@@ -116,6 +119,7 @@ class DescribeResourceOutput(BaseModel):
 
 
 # --- RMES_run_sparql ---
+
 
 class RunSparqlInput(BaseModel):
     full_sparql_query: str = Field(
@@ -136,8 +140,8 @@ class RunSparqlInput(BaseModel):
 
 class RunSparqlOutput(BaseModel):
     format: Literal["json", "turtle"] = "json"
-    limit_added: Optional[int] = None
-    hint: Optional[str] = None
-    variables: Optional[list[str]] = None
-    bindings: Optional[list[dict[str, Any]]] = None
-    turtle: Optional[str] = None
+    limit_added: int | None = None
+    hint: str | None = None
+    variables: list[str] | None = None
+    bindings: list[dict[str, Any]] | None = None
+    turtle: str | None = None

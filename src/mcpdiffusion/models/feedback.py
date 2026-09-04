@@ -1,4 +1,5 @@
 """Pydantic schemas for the feedback tool."""
+
 from __future__ import annotations
 
 from pydantic import BaseModel, Field

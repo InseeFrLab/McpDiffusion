@@ -1,12 +1,12 @@
 """Business logic for Melodi tools (observations, datasets, modalities)."""
+
 from __future__ import annotations
 
 from typing import Any
 
 import httpx
-from elasticsearch import AsyncElasticsearch
+from elasticsearch import AsyncElasticsearch, TransportError
 from elasticsearch import ConnectionError as ESConnectionError
-from elasticsearch import TransportError
 
 from ..core.errors import AppToolError
 from ..models.melodi import (
@@ -86,9 +86,6 @@ async def get_melodi_observations(
             "PARSE_ERROR",
             "Melodi API response did not contain an 'observations' list.",
         )
-        # Fixme: this not not an appropriate fix
-        #   this piece of code is unreachable since 'fail' raises already before
-        raise  # pragma: no cover
 
     if params.list_of_year:
         years_str = {str(y) for y in params.list_of_year}
@@ -98,9 +95,7 @@ async def get_melodi_observations(
             obs
             for obs in observations
             # Fixme: 'TIME_PERIOD' could be sanitized
-            if (obs.get("dimensions", {})
-                .get("TIME_PERIOD", "")
-                .split("-")[0]) in years_str
+            if (obs.get("dimensions", {}).get("TIME_PERIOD", "").split("-")[0]) in years_str
         ]
 
     sliced = observations[: params.number_of_results]
@@ -110,8 +105,10 @@ async def get_melodi_observations(
         count=len(sliced),
     )
 
+
 # Fixme: I believe this is not the correct place (inside the service) to place a raw complex query
 #   the code might benefit having a repository layer to encapsulate data access
+
 
 async def search_melodi_datasets(
     params: SearchMelodiDatasetsInput,
@@ -121,21 +118,9 @@ async def search_melodi_datasets(
 ) -> SearchMelodiDatasetsOutput:
     filters: list[dict[str, Any]] = []
     if params.start_year:
-        filters.append({
-            "range": {
-                "metadata.temporal.endPeriod": {
-                    "gte": f"{params.start_year}-01-01"
-                }
-            }
-        })
+        filters.append({"range": {"metadata.temporal.endPeriod": {"gte": f"{params.start_year}-01-01"}}})
     if params.end_year:
-        filters.append({
-            "range": {
-                "metadata.temporal.startPeriod": {
-                    "lte": f"{params.end_year}-12-31"
-                }
-            }
-        })
+        filters.append({"range": {"metadata.temporal.startPeriod": {"lte": f"{params.end_year}-12-31"}}})
 
     body = {
         "size": params.number_of_results,
@@ -203,8 +188,7 @@ async def search_melodi_datasets(
     except (ESConnectionError, TransportError) as exc:
         raise AppToolError(
             "BACKEND_UNAVAILABLE",
-            f"Melodi datasets search backend unreachable: {exc}. "
-            "Verify ES_HOST and try again.",
+            f"Melodi datasets search backend unreachable: {exc}. Verify ES_HOST and try again.",
             retryable=True,
         )
 
@@ -281,20 +265,14 @@ async def search_melodi_modalities(
     except (ESConnectionError, TransportError) as exc:
         raise AppToolError(
             "BACKEND_UNAVAILABLE",
-            f"Melodi columns search backend unreachable: {exc}. "
-            "Verify ES_HOST and try again.",
+            f"Melodi columns search backend unreachable: {exc}. Verify ES_HOST and try again.",
             retryable=True,
         )
 
     results: list[ColumnResult] = []
     for hit in ds_column.get("hits", {}).get("hits", []):
         modalities: list[Modality] = []
-        inner_hits = (
-            hit.get("inner_hits", {})
-            .get("modalities", {})
-            .get("hits", {})
-            .get("hits", [])
-        )
+        inner_hits = hit.get("inner_hits", {}).get("modalities", {}).get("hits", {}).get("hits", [])
         for m in inner_hits:
             src = m.get("_source", {})
             label = src.get("label", {}) or {}

@@ -1,10 +1,14 @@
 """Curated INSEE key indicators (homepage data)."""
 
-# Fixme: I am wondering whether this really belongs in the source code or in a separate file or database
-# Fixme: The 1st entry seems like a header (contains no real data), is that normal?
-# Fixme: This seems like hardcoded, stale statistics... I don't know if this is normal
-DICT_KV = [
-    {"cle": "clé", "alias": "alias", "valeur": "valeur"},
+# Business rule: these figures are frozen literals — nothing refreshes them, so the server reports whatever
+# was true when this file was last edited, while each sentence asserts its own date. Whether to fetch
+# insee.fr live, derive them from the Elasticsearch index, or keep a curated list with a visible
+# "last updated" is a decision for the data owners. Behaviour preserved until then.
+#
+# The tool description used to promise `mainIndicators` with a per-indicator link to pass to
+# `get_insee_document`, plus `lastArticles` and `keyGraphics`. None of that was ever produced. It is
+# recorded here because it says what the tool was meant to be, and is worth raising in that decision.
+KEY_INDICATORS = [
     {
         "cle": "estimation de population France",
         "alias": "",
@@ -62,11 +66,11 @@ DICT_KV = [
     },
     {
         "cle": "inflation",
-        "alias": "Indice des prix à la consommation – IPC ",
+        "alias": "Indice des prix à la consommation – IPC",
         "valeur": "En juin 2026, les prix à la consommation (IPC) augmentent de 1,8 % sur un an. Sur un mois, l'indice des prix à la consommation diminue de 0,3 %.",
     },
     {
-        "cle": "Chômage BIT ",
+        "cle": "Chômage BIT",
         "alias": "",
         "valeur": "Au premier trimestre 2026, le taux de chômage  en France (hors Mayotte) augmente de 0,2 point et atteint 8,1 % . Le nombre de chômeurs est de  2,6 millions de personnes.",
     },
@@ -118,7 +122,7 @@ DICT_KV = [
     {
         "cle": "balance commerciale",
         "alias": "",
-        "valeur": "En 2025, les exportations en volume restent soutenues (+2,3 % après +3,2 % en 2024), tandis que les importations se redressent nettement (+2,8 % après -0,6 %). De ce fait, les échanges extérieurs pèsent sur la croissance de l'activité en 2025, à hauteur de -0,2 point de PIB, après l'avoir fortement soutenue en 2023 et 2024. ",
+        "valeur": "En 2025, les exportations en volume restent soutenues (+2,3 % après +3,2 % en 2024), tandis que les importations se redressent nettement (+2,8 % après -0,6 %). De ce fait, les échanges extérieurs pèsent sur la croissance de l'activité en 2025, à hauteur de -0,2 point de PIB, après l'avoir fortement soutenue en 2023 et 2024.",
     },
     {
         "cle": "pauvreté monétaire",
@@ -128,7 +132,7 @@ DICT_KV = [
     {
         "cle": "patrimoine",
         "alias": "",
-        "valeur": "Début 2024, la moitié des ménages vivant en France déclarent un patrimoine brut supérieur à 205 100 euros. La moitié la mieux dotée en patrimoine brut possède collectivement 93 % de la masse totale de patrimoine. ",
+        "valeur": "Début 2024, la moitié des ménages vivant en France déclarent un patrimoine brut supérieur à 205 100 euros. La moitié la mieux dotée en patrimoine brut possède collectivement 93 % de la masse totale de patrimoine.",
     },
     {
         "cle": "état santé",

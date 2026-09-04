@@ -130,8 +130,8 @@ GET_DOCUMENT = {
     "tool_description": (
         "Fetch and parse a single INSEE publication from a known URL and "
         "return its full text in markdown. Use ONLY when you already have one "
-        "or more explicit URLs (e.g. from `search_insee_documents` or from "
-        "the `link` fields returned by `get_insee_homepage`).\n"
+        "or more explicit URLs, from `search_insee_documents`, "
+        "`search_insee_conjoncture` or `search_insee_chiffrecle`.\n"
         "\n"
         "WHEN TO USE\n"
         "- You have a concrete URL of the form `/fr/statistiques/<id>` or "
@@ -267,6 +267,9 @@ SEARCH_CONJONCTURE = {
     "tool_metadata": {"version": "5.0", "author": "mirlon"},
 }
 
+# Business rule: this description calls the figures "latest" and makes the tool the preferred FIRST step,
+# but they are frozen literals (see data/indicators.py). Whether the wording softens or the data becomes
+# live is the same decision. Left as-is deliberately.
 GET_HOMEPAGE = {
     "tool_name": "get_insee_homepage",
     "tool_description": (
@@ -283,17 +286,15 @@ GET_HOMEPAGE = {
         "or `search_insee_conjoncture` with `year_of_reference`.\n"
         "\n"
         "OUTPUT\n"
-        "- `mainIndicators` -- each with name, value, description and a link "
-        "to the underlying official product (pass the link to `get_insee_document`).\n"
-        "- `lastArticles` -- recent short articles with title, date, "
-        "collection and link.\n"
-        "- `keyGraphics` -- selection of recent graphical publications.\n"
+        "- `indicators` -- each with `key` (indicator name), `alias` (alternative name, often empty) "
+        "and `value`, a full sentence in French stating the figure and the period it covers.\n"
+        "- `count` -- number of indicators returned.\n"
         "\n"
         "WORKFLOW\n"
         "1. Call this tool.\n"
-        "2. Present the indicator value + description + link.\n"
+        "2. Present the indicator value, quoting the period it states.\n"
         "3. Follow up with `search_insee_documents` or `search_insee_conjoncture` "
-        "only if the user needs deeper tables or historic series.\n"
+        "if the user needs deeper tables, historic series, or a source document.\n"
         "\n"
         f"Current date is {compute_current_date_iso()}.\n"
     ),

@@ -2,6 +2,7 @@
 
 import logging
 
+import uvicorn
 from fastmcp import FastMCP
 from fastmcp.server.middleware.error_handling import ErrorHandlingMiddleware
 from fastmcp.server.middleware.logging import LoggingMiddleware
@@ -74,8 +75,6 @@ app = mcp.http_app(
 )
 
 if __name__ == "__main__":
-    import uvicorn
-
     uvicorn.run(
         app,
         host=settings.mcp_host,

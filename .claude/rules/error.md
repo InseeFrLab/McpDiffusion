@@ -30,9 +30,9 @@ step — the offending parameter, or the tool that produces a valid value. Never
   (it swallows `CancelledError`).
 - Translate once, at the boundary owning the dependency. Never re-wrap an already typed error.
 - Never swallow: no empty `except`, no default on failure, no log-and-continue.
-- Chain with `raise ... from exc`. Server-side hygiene only: `__cause__` never crosses the wire, so it
-  leaks nothing, and Python keeps the original either way — this just states that it was the cause rather
-  than an error raised while handling one.
+- Do not write `raise ... from exc`. Python keeps the original as `__context__` either way, so the cause
+  is in the traceback regardless; chaining only changes the wording. `ErrorHandlingMiddleware` runs with
+  `include_traceback=True`, which is what actually puts the cause in the log. B904 is ignored for this.
 
 ## Use what FastMCP provides
 
@@ -41,4 +41,5 @@ step — the offending parameter, or the tool that produces a valid value. Never
   generic message; `ToolError` subclasses keep theirs.
 - `ErrorHandlingMiddleware` catches, logs and converts every exception. Register it first, so it sees the
   rest of the chain. Failures are logged there, not by the code that raises — see `logging.md`.
-- `RetryMiddleware` handles transient failures with backoff. Do not write a retry loop.
+- `RetryMiddleware` handles transient failures with backoff. Do not write a retry loop. A client's own
+  retry settings are different and stay where they are — the Elasticsearch client retries internally.

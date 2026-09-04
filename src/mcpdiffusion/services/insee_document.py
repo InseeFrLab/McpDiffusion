@@ -13,9 +13,8 @@ from trafilatura.settings import Extractor
 
 from ..core.errors import AppToolError
 from ..models.insee import (
+    DocumentContentOutput,
     DocumentResult,
-    GetInseeDocumentInput,
-    GetInseeDocumentOutput,
 )
 
 logger = logging.getLogger(__name__)
@@ -147,31 +146,33 @@ def _build_failed_document(url: object, message: str) -> DocumentResult:
     )
 
 
-async def get_insee_document(
-    params: GetInseeDocumentInput,
+async def get_insee_document_service(
     *,
+    document_urls: list[str],
+    include_table_of_contents: bool,
+    truncate_content: bool,
     http_client: httpx.AsyncClient,
-) -> GetInseeDocumentOutput:
-    if not params.list_of_url:
+) -> DocumentContentOutput:
+    if not document_urls:
         raise AppToolError(
             "INVALID_INPUT",
-            "list_of_url must contain at least one URL. Use `search_insee_documents` to find URLs first.",
+            "document_urls must contain at least one URL. Use `search_insee_documents` to find URLs first.",
         )
 
     results: list[DocumentResult] = []
     # Fixme: there should be a cap in the number of URLs provided to avoid overloading the server
     # Fixme: on top of that, the fetching is done sequentially, impacting the event loop
-    for url in params.list_of_url:
+    for url in document_urls:
         try:
             html = await _fetch_html(str(url), http_client)
             markdown = extract(html, options=_TRAFILATURA_OPTIONS) or ""
-            if params.truncate_content:
+            if truncate_content:
                 markdown, truncated = _truncate(markdown)
             else:
                 truncated = False
 
             sommaire: dict[str, dict[str, str]] | None = None
-            if params.include_sommaire:
+            if include_table_of_contents:
                 flat = _parse_sommaire(html, str(http_client.base_url))
                 sommaire = _format_sommaire(flat) if flat else None
 
@@ -193,4 +194,4 @@ async def get_insee_document(
             logger.exception("Unexpected failure fetching %s", url)
             results.append(_build_failed_document(url, "[UNKNOWN] Could not fetch this document."))
 
-    return GetInseeDocumentOutput(results=results, count=len(results))
+    return DocumentContentOutput(results=results, count=len(results))

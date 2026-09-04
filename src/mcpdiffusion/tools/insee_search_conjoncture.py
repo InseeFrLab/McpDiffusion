@@ -7,13 +7,16 @@ from elasticsearch import TransportError
 from elasticsearch.dsl import Q
 from fastmcp import Context, FastMCP
 
-from ..config.tool_metadata import SEARCH_CONJONCTURE
 from ..core.errors import AppToolError
 from ..data.themes import DICT_THEME_CONJ
 from ..infra.elasticsearch import get_elasticsearch_client
 from ..models.insee import (
-    SearchInseeConjonctureInput,
-    SearchInseeConjonctureOutput,
+    DEFAULT_RESULT_COUNT,
+    ConjonctureQuery,
+    ConjonctureYearOfReference,
+    DocumentSearchOutput,
+    NumberOfResults,
+    ThemeConjoncture,
 )
 from ..services.insee_search import (
     apply_collection_filters,
@@ -24,18 +27,24 @@ from ..services.insee_search import (
 
 # Fixme: again, a lot of code in that tool that should belong in the service
 def register_search_insee_conjoncture(mcp: FastMCP, *, index: str) -> None:
-    @mcp.tool(
-        name=SEARCH_CONJONCTURE["tool_name"],
-        description=SEARCH_CONJONCTURE["tool_description"],
-        meta=SEARCH_CONJONCTURE["tool_metadata"],
-    )
+    @mcp.tool
     async def search_insee_conjoncture(
-        params: SearchInseeConjonctureInput,
         ctx: Context,
-    ) -> SearchInseeConjonctureOutput:
+        query: ConjonctureQuery,
+        theme_conjoncture: ThemeConjoncture = None,
+        year_of_reference: ConjonctureYearOfReference = None,
+        number_of_results: NumberOfResults = DEFAULT_RESULT_COUNT,
+    ) -> DocumentSearchOutput:
+        """Search INSEE Rapid Releases (Informations rapides): short, recurring publications reporting
+        the latest monthly/quarterly/annual results for major economic and social indicators (prices,
+        employment, production, housing, wages, national accounts, ...).
+
+        The search is lexical and rewards keyword breadth, so provide several synonyms and related
+        notions.
+        """
         must, filters, should = build_text_clauses(
-            query=params.query,
-            year_of_reference=params.year_of_reference,
+            query=query,
+            year_of_reference=year_of_reference,
         )
         filters, collection_should = apply_collection_filters(
             filters,
@@ -43,10 +52,10 @@ def register_search_insee_conjoncture(mcp: FastMCP, *, index: str) -> None:
             must_not_rapides=False,
             must_only_rapides=True,
         )
-        if params.theme_conjoncture:
-            subthemes = DICT_THEME_CONJ.get(params.theme_conjoncture)
+        if theme_conjoncture:
+            subthemes = DICT_THEME_CONJ.get(theme_conjoncture)
             # Business rule: an unrecognised subtheme drops the filter silently and returns everything,
-            # the same shape as the theme and geo_niveau filters.
+            # the same shape as the theme and geo_level filters.
             if subthemes:
                 filters.append(Q("terms", conjoncture_libelle=subthemes))
 
@@ -56,7 +65,7 @@ def register_search_insee_conjoncture(mcp: FastMCP, *, index: str) -> None:
                 filters=filters,
                 should=should + collection_should,
                 minimum_should_match=1 if collection_should else 0,
-                number_of_results=params.number_of_results,
+                number_of_results=number_of_results,
                 es=get_elasticsearch_client(ctx),
                 index=index,
             )
@@ -66,4 +75,4 @@ def register_search_insee_conjoncture(mcp: FastMCP, *, index: str) -> None:
                 f"INSEE conjoncture search backend unreachable: {exc}. Verify ES_HOST and try again.",
                 retryable=True,
             )
-        return SearchInseeConjonctureOutput(results=hits, count=len(hits))
+        return DocumentSearchOutput(results=hits, count=len(hits))

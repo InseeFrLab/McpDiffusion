@@ -12,27 +12,27 @@ from ..core.errors import AppToolError
 from ..models.melodi import (
     ColumnResult,
     DatasetSearchResult,
-    GetMelodiObservationsInput,
-    GetMelodiObservationsOutput,
+    DatasetsOutput,
+    ModalitiesOutput,
     Modality,
-    SearchMelodiDatasetsInput,
-    SearchMelodiDatasetsOutput,
-    SearchMelodiModalitiesInput,
-    SearchMelodiModalitiesOutput,
+    ObservationsOutput,
 )
 
 
-async def get_melodi_observations(
-    params: GetMelodiObservationsInput,
+async def get_melodi_observations_service(
+    dataset_id: str,
+    years: list[int],
+    column_filters: dict[str, str],
+    number_of_observations: int,
     *,
     http_client: httpx.AsyncClient,
-) -> GetMelodiObservationsOutput:
+) -> ObservationsOutput:
     # Resolved against the client's base_url.
-    url = f"/{params.dataset_id}"
+    url = f"/{dataset_id}"
     try:
         response = await http_client.get(
             url,
-            params=params.dict_of_columns_and_values or None,
+            params=column_filters or None,
         )
         response.raise_for_status()
     # Fixme: the following problematic error handling pattern has already been adressed
@@ -49,14 +49,14 @@ async def get_melodi_observations(
             raise AppToolError(
                 "INVALID_INPUT",
                 f"Melodi API rejected the query (HTTP 400). "
-                f"Columns/values passed: {params.dict_of_columns_and_values}. "
+                f"Columns/values passed: {column_filters}. "
                 f"Upstream detail: {body_excerpt}. "
                 "Verify modality codes with `search_melodi_modalities`.",
             )
         elif status == 404:
             raise AppToolError(
                 "NOT_FOUND",
-                f"Melodi dataset {params.dataset_id!r} not found (HTTP 404). "
+                f"Melodi dataset {dataset_id!r} not found (HTTP 404). "
                 "Check the dataset_id with `search_melodi_datasets`.",
             )
         else:
@@ -87,8 +87,8 @@ async def get_melodi_observations(
             "Melodi API response did not contain an 'observations' list.",
         )
 
-    if params.list_of_year:
-        years_str = {str(y) for y in params.list_of_year}
+    if years:
+        years_str = {str(y) for y in years}
         # Fixme: it seems we retrieve all the observations data and filter next
         #   I wonder whether the API supports filtering
         observations = [
@@ -98,9 +98,9 @@ async def get_melodi_observations(
             if (obs.get("dimensions", {}).get("TIME_PERIOD", "").split("-")[0]) in years_str
         ]
 
-    sliced = observations[: params.number_of_results]
-    return GetMelodiObservationsOutput(
-        dataset_id=params.dataset_id,
+    sliced = observations[:number_of_observations]
+    return ObservationsOutput(
+        dataset_id=dataset_id,
         observations=sliced,
         count=len(sliced),
     )
@@ -110,20 +110,23 @@ async def get_melodi_observations(
 #   the code might benefit having a repository layer to encapsulate data access
 
 
-async def search_melodi_datasets(
-    params: SearchMelodiDatasetsInput,
+async def search_melodi_datasets_service(
+    query: str,
+    start_year: int,
+    end_year: int,
+    number_of_datasets: int,
     *,
     es: AsyncElasticsearch,
     index: str,
-) -> SearchMelodiDatasetsOutput:
+) -> DatasetsOutput:
     filters: list[dict[str, Any]] = []
-    if params.start_year:
-        filters.append({"range": {"metadata.temporal.endPeriod": {"gte": f"{params.start_year}-01-01"}}})
-    if params.end_year:
-        filters.append({"range": {"metadata.temporal.startPeriod": {"lte": f"{params.end_year}-12-31"}}})
+    if start_year:
+        filters.append({"range": {"metadata.temporal.endPeriod": {"gte": f"{start_year}-01-01"}}})
+    if end_year:
+        filters.append({"range": {"metadata.temporal.startPeriod": {"lte": f"{end_year}-12-31"}}})
 
     body = {
-        "size": params.number_of_results,
+        "size": number_of_datasets,
         "query": {
             "bool": {
                 "should": [
@@ -133,7 +136,7 @@ async def search_melodi_datasets(
                             "query": {
                                 "match": {
                                     "metadata.title.content": {
-                                        "query": params.french_query,
+                                        "query": query,
                                         "boost": 10,
                                     }
                                 }
@@ -146,7 +149,7 @@ async def search_melodi_datasets(
                             "query": {
                                 "match": {
                                     "metadata.abstract.content": {
-                                        "query": params.french_query,
+                                        "query": query,
                                         "boost": 6,
                                     }
                                 }
@@ -159,7 +162,7 @@ async def search_melodi_datasets(
                             "query": {
                                 "match": {
                                     "metadata.description.content": {
-                                        "query": params.french_query,
+                                        "query": query,
                                         "boost": 3,
                                     }
                                 }
@@ -169,7 +172,7 @@ async def search_melodi_datasets(
                     {
                         "match": {
                             "variables_text": {
-                                "query": params.french_query,
+                                "query": query,
                                 "boost": 5,
                             }
                         }
@@ -208,18 +211,21 @@ async def search_melodi_datasets(
                 dataset_score=float(hit.get("_score") or 0.0),
             )
         )
-    return SearchMelodiDatasetsOutput(results=results)
+    return DatasetsOutput(results=results)
 
 
-async def search_melodi_modalities(
-    params: SearchMelodiModalitiesInput,
+async def search_melodi_modalities_service(
+    dataset_id: str,
+    column_ids: list[str],
+    query: str,
+    number_of_modalities: int,
     *,
     es: AsyncElasticsearch,
     index: str,
-) -> SearchMelodiModalitiesOutput:
-    filters: list[dict[str, Any]] = [{"term": {"dataset_id": params.dataset_id}}]
-    if params.columns_id:
-        filters.append({"terms": {"code": params.columns_id}})
+) -> ModalitiesOutput:
+    filters: list[dict[str, Any]] = [{"term": {"dataset_id": dataset_id}}]
+    if column_ids:
+        filters.append({"terms": {"code": column_ids}})
 
     try:
         ds_column = await es.search(
@@ -232,7 +238,7 @@ async def search_melodi_modalities(
                         {
                             "match": {
                                 "text": {
-                                    "query": params.french_query,
+                                    "query": query,
                                     "boost": 2,
                                 }
                             }
@@ -243,7 +249,7 @@ async def search_melodi_modalities(
                                 "score_mode": "max",
                                 "query": {
                                     "multi_match": {
-                                        "query": params.french_query,
+                                        "query": query,
                                         "fields": [
                                             "modalities.code^5",
                                             "modalities.label.en^3",
@@ -253,7 +259,7 @@ async def search_melodi_modalities(
                                     }
                                 },
                                 "inner_hits": {
-                                    "size": params.number_of_results,
+                                    "size": number_of_modalities,
                                     "sort": [{"_score": "desc"}],
                                 },
                             }
@@ -287,9 +293,9 @@ async def search_melodi_modalities(
         results.append(
             ColumnResult(
                 column_code=str(hit.get("_source", {}).get("code", "")),
-                metadata_columns=str(hit.get("_source", {}).get("text", "")),
+                column_metadata=str(hit.get("_source", {}).get("text", "")),
                 matching_modalities=modalities,
             )
         )
 
-    return SearchMelodiModalitiesOutput(results=results)
+    return ModalitiesOutput(results=results)

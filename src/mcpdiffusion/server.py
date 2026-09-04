@@ -10,6 +10,7 @@ from fastmcp.server.middleware.rate_limiting import SlidingWindowRateLimitingMid
 from fastmcp.server.middleware.timing import TimingMiddleware
 
 from .config.settings import load_settings
+from .core.instructions import build_instructions
 from .core.logging import build_logging_config, configure_logging
 from .core.rate_limiting import resolve_client_host
 from .infra.lifespan import build_lifespan
@@ -21,6 +22,13 @@ logger = logging.getLogger(__name__)
 
 mcp = FastMCP(
     "INSEE-mcp-diffusion",
+    # Routing guidance, delivered in the handshake so it reaches the caller without relying on a
+    # separate file being loaded. Built from the enabled families so it never names a missing tool.
+    instructions=build_instructions(
+        enable_inseefr_tools=settings.enable_inseefr_tools,
+        enable_melodi_tools=settings.enable_melodi_tools,
+        enable_rmes_tools=settings.enable_rmes_tools,
+    ),
     # Only AppToolError messages reach the caller; anything else is a bug and is replaced
     # by a generic message.
     mask_error_details=True,

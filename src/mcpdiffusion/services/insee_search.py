@@ -85,7 +85,7 @@ def apply_collection_filters(
     must_only_rapides: bool,
     chiffre_clef: bool = False,
     theme: str | None = None,
-    geo_niveau: str | None = None,
+    geo_level: str | None = None,
     geo_keyword: str | None = None,
 ) -> tuple[list, list]:
     """Return new (filters, should) lists. The caller's `filters` is left untouched."""
@@ -108,8 +108,8 @@ def apply_collection_filters(
     if chiffre_clef:
         filters.append(Q("term", categorie_libelle="Chiffres-clés"))
 
-    if geo_niveau:
-        key_geo = DICT_GEO.get(geo_niveau)
+    if geo_level:
+        key_geo = DICT_GEO.get(geo_level)
         if key_geo:
             # Business rule: same as the theme filter above — an unrecognised geo_niveau is dropped
             # silently and broadens the search.

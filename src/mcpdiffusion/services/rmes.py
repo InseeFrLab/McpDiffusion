@@ -20,15 +20,12 @@ from ..models.rmes import (
     MAX_QUERY_TIMEOUT_SECONDS,
     MAX_ROW_LIMIT,
     CategoryBucket,
-    DescribeResourceInput,
-    DescribeResourceOutput,
     GraphCategoryChoice,
     GraphRow,
-    ListGraphsInput,
-    ListGraphsOutput,
+    GraphsOutput,
+    ResourceOutput,
     ResourceProperty,
-    RunSparqlInput,
-    RunSparqlOutput,
+    SparqlOutput,
 )
 
 # Fixme: follow a clear convention for logger names
@@ -43,27 +40,9 @@ _GRAPH_CACHE: dict[str, Any] = {"data": None, "ts": 0.0}
 _GRAPH_CACHE_TTL = 3600.0  # 1h
 
 
-# --- Known vocabularies note (injected in run_sparql description) ---
-
-KNOWN_VOCABULARIES_NOTE = """
-Vocabulaires principaux rencontres dans cette base (au-dela de skos/xkos/dcterms) :
-- sdmx-mm: (http://www.w3.org/ns/sdmx-mm#) -- rapports qualite. Un sdmx-mm:MetadataReport
-  a une cible via sdmx-mm:target (vers un id.insee.fr/operations/operation/...) et des
-  sdmx-mm:ReportedAttribute rattaches via sdmx-mm:metadataReport.
-- rdf.insee.fr/def/base# -- ontologie pivot : StatisticalOperation, StatisticalOperationSeries,
-  StatisticalOperationFamily (graphe "operations"), StatisticalIndicator (graphe "produits"),
-  StatutDiffusion...
-- org: (http://www.w3.org/ns/org#) -- Organization / OrganizationalUnit (graphes
-  "organisations" et "organisations/insee").
-- dcat: (http://www.w3.org/ns/dcat#) -- Dataset / CatalogRecord (graphe "catalogue").
-Utilise RMES_list_graphs pour voir les grandes categories de graphes avant de creuser
-avec ce tool.
-""".strip()
-
-
-# ---------------------------------------------------------------------------
-# Graph taxonomy
-# ---------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
+# Graph taxonomy -------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
 # Fixme: this is too broad of a type
 CategoryMatcher = Any  # Callable[[str], bool]
@@ -222,9 +201,9 @@ def _categorize(graph_uri: str) -> _CategoryRule:
     return _CATEGORY_AUTRE
 
 
-# ---------------------------------------------------------------------------
-# SPARQL query helpers
-# ---------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
+# SPARQL query helpers -------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
 _STRIP_PREFIX_RE = re.compile(r"(?i)^\s*(PREFIX|BASE)\b.*$", re.MULTILINE)
 _QUERY_FORM_RE = re.compile(r"(?i)\b(SELECT|ASK|CONSTRUCT|DESCRIBE)\b")
@@ -253,14 +232,14 @@ def _accept_header(query_form: str) -> str:
     return "text/turtle"
 
 
-# ---------------------------------------------------------------------------
-# Low-level SPARQL execution
-# ---------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
+# Low-level SPARQL execution -------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
 
 async def _execute_sparql(
     query: str,
-    timeout: float,
+    timeout_seconds: float,
     max_rows: int,
     *,
     sparql_client: httpx.AsyncClient,
@@ -284,14 +263,14 @@ async def _execute_sparql(
             endpoint,
             data={"query": effective_query},
             headers={"Accept": accept},
-            timeout=min(timeout, MAX_QUERY_TIMEOUT_SECONDS),
+            timeout=min(timeout_seconds, MAX_QUERY_TIMEOUT_SECONDS),
         )
         response.raise_for_status()
 
     except httpx.TimeoutException:
         raise AppToolError(
             "BACKEND_UNAVAILABLE",
-            f"Le endpoint RMES n'a pas repondu en moins de {timeout}s. "
+            f"Le endpoint RMES n'a pas repondu en moins de {timeout_seconds}s. "
             "Restreins la requete (ajoute une clause GRAPH precise, reduis le LIMIT, "
             "evite les scans sans filtre sur tous les graphes).",
             retryable=True,
@@ -354,7 +333,7 @@ async def _get_raw_graph_rows(
         #  otherwise each waiter just re-runs the same expensive query
         result = await _execute_sparql(
             query,
-            timeout=GRAPH_LISTING_TIMEOUT_SECONDS,
+            timeout_seconds=GRAPH_LISTING_TIMEOUT_SECONDS,
             max_rows=GRAPH_LISTING_MAX_ROWS,
             sparql_client=sparql_client,
             endpoint=endpoint,
@@ -368,9 +347,9 @@ async def _get_raw_graph_rows(
     return _GRAPH_CACHE["data"]
 
 
-# ---------------------------------------------------------------------------
-# High-level tool operations
-# ---------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
+# High-level tool operations -------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
 
 def _build_category_summary(rows: list[dict[str, Any]]) -> list[CategoryBucket]:
@@ -397,30 +376,31 @@ def _build_category_summary(rows: list[dict[str, Any]]) -> list[CategoryBucket]:
     return [buckets[k] for k in ordered_keys if k in buckets]
 
 
-async def list_graphs(
-    params: ListGraphsInput,
+async def search_rmes_graphs_service(
+    graph_uri_substring: str | None,
+    graph_category: GraphCategoryChoice,
+    expand_graphs: bool,
     *,
     sparql_client: httpx.AsyncClient,
     endpoint: str,
-) -> ListGraphsOutput:
+) -> GraphsOutput:
     rows = await _get_raw_graph_rows(
         sparql_client=sparql_client,
         endpoint=endpoint,
     )
-    expand = params.expand
 
-    if params.contains:
-        needle = params.contains.lower()
+    if graph_uri_substring:
+        needle = graph_uri_substring.lower()
         rows = [r for r in rows if needle in r["graph"].lower()]
-        expand = True
+        expand_graphs = True
 
-    if params.category != GraphCategoryChoice.ALL:
-        rows = [r for r in rows if _categorize(r["graph"]).key == params.category.value]
-        expand = True
+    if graph_category != GraphCategoryChoice.ALL:
+        rows = [r for r in rows if _categorize(r["graph"]).key == graph_category.value]
+        expand_graphs = True
 
     summary = _build_category_summary(rows)
 
-    if expand:
+    if expand_graphs:
         rows_by_graph = {r["graph"]: r["triples"] for r in rows}
         for bucket in summary:
             bucket_rows = [
@@ -432,7 +412,7 @@ async def list_graphs(
             bucket_rows.sort(key=lambda r: r.triples, reverse=True)
             bucket.graphs = bucket_rows
 
-    return ListGraphsOutput(total_graphs_matched=len(rows), categories=summary)
+    return GraphsOutput(total_graphs_matched=len(rows), categories=summary)
 
 
 def _parse_bindings_to_properties(bindings: list[dict[str, Any]]) -> list[ResourceProperty]:
@@ -451,68 +431,69 @@ def _parse_bindings_to_properties(bindings: list[dict[str, Any]]) -> list[Resour
     return props
 
 
-async def describe_resource(
-    params: DescribeResourceInput,
+async def describe_rmes_resource_service(
+    resource_uri: str,
+    graph_uri: str | None,
     *,
     sparql_client: httpx.AsyncClient,
     endpoint: str,
-) -> DescribeResourceOutput:
-    graph_clause = f"<{params.graph}>" if params.graph else "?g"
-    graph_values = f"VALUES ?g {{ <{params.graph}> }}" if params.graph else ""
+) -> ResourceOutput:
+    graph_clause = f"<{graph_uri}>" if graph_uri else "?g"
+    graph_values = f"VALUES ?g {{ <{graph_uri}> }}" if graph_uri else ""
     # Fixme: the query is built using string interpolation
     #   just check whether injection can cause problems here
     query = f"""
     SELECT ?g ?direction ?p ?o WHERE {{
       {graph_values}
       {{
-        GRAPH {graph_clause} {{ <{params.uri}> ?p ?o }}
+        GRAPH {graph_clause} {{ <{resource_uri}> ?p ?o }}
         BIND("outgoing" AS ?direction)
       }} UNION {{
-        GRAPH {graph_clause} {{ ?o ?p <{params.uri}> }}
+        GRAPH {graph_clause} {{ ?o ?p <{resource_uri}> }}
         BIND("incoming" AS ?direction)
       }}
     }} LIMIT {MAX_ROW_LIMIT}
     """
     result = await _execute_sparql(
         query,
-        timeout=DEFAULT_QUERY_TIMEOUT_SECONDS,
+        timeout_seconds=DEFAULT_QUERY_TIMEOUT_SECONDS,
         max_rows=MAX_ROW_LIMIT,
         sparql_client=sparql_client,
         endpoint=endpoint,
     )
 
     properties = _parse_bindings_to_properties(result["results"]["bindings"])
-    return DescribeResourceOutput(uri=params.uri, properties=properties, count=len(properties))
+    return ResourceOutput(uri=resource_uri, properties=properties, count=len(properties))
 
 
-async def run_sparql(
-    params: RunSparqlInput,
+async def run_rmes_sparql_service(
+    sparql_query: str,
+    timeout_seconds: float,
+    max_rows: int,
     *,
     sparql_client: httpx.AsyncClient,
     endpoint: str,
-) -> RunSparqlOutput:
-    if not params.full_sparql_query or not params.full_sparql_query.strip():
+) -> SparqlOutput:
+    if not sparql_query or not sparql_query.strip():
         raise AppToolError(
             "INVALID_INPUT",
             "La requete SPARQL est vide. Fournis une requete SELECT, ASK, CONSTRUCT ou DESCRIBE.",
         )
 
-    max_rows = max(1, min(params.max_rows, MAX_ROW_LIMIT))
+    max_rows = max(1, min(max_rows, MAX_ROW_LIMIT))
     result = await _execute_sparql(
-        params.full_sparql_query,
-        timeout=params.timeout,
+        sparql_query,
+        timeout_seconds=timeout_seconds,
         max_rows=max_rows,
         sparql_client=sparql_client,
         endpoint=endpoint,
     )
 
     if result.get("format") == "turtle":
-        return RunSparqlOutput(
-            format="turtle", limit_added=result.get("limit_added") and max_rows, turtle=result["data"]
-        )
+        return SparqlOutput(format="turtle", limit_added=result.get("limit_added") and max_rows, turtle=result["data"])
 
     meta = result.get("_meta", {})
-    return RunSparqlOutput(
+    return SparqlOutput(
         format="json",
         limit_added=meta.get("limit_added"),
         hint=meta.get("hint"),

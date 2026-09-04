@@ -2,15 +2,30 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+from typing import Annotated, Literal
+
 from pydantic import BaseModel, Field
 
+# ----------------------------------------------------------------------------------------------------------------------
+# Tool parameters ------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
-class SendFeedbackInput(BaseModel):
-    username: str = Field(
+Author = Annotated[
+    str,
+    Field(
         description="Identifier for the feedback author (e.g., user name, role, or session ID).",
-        examples=["alice", "data_analyst", "session_abc123"],
-    )
-    feedback: str = Field(
+        examples=[
+            "alice",
+            "data_analyst",
+            "session_abc123",
+        ],
+    ),
+]
+
+Feedback = Annotated[
+    str,
+    Field(
         description=(
             "Clear, actionable Markdown describing the issue or suggestion. Include context "
             "(which tool, what happened), expected vs actual behavior, and proposed solutions "
@@ -22,12 +37,16 @@ class SendFeedbackInput(BaseModel):
             "at least one matching dataset.\n\n**Proposed fix:** Check if the Elasticsearch index "
             "includes this dataset.",
         ],
-    )
+    ),
+]
 
 
-class SendFeedbackOutput(BaseModel):
-    # Fixme: prefer a Literal
-    status: str = "success"
+# ----------------------------------------------------------------------------------------------------------------------
+# Result models --------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+class FeedbackOutput(BaseModel):
+    status: Literal["success"] = "success"
     message: str
-    # Fixme: why not use a datetime object?
-    timestamp: str
+    timestamp: datetime

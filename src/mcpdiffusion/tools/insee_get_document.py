@@ -4,21 +4,32 @@ from __future__ import annotations
 
 from fastmcp import Context, FastMCP
 
-from ..config.tool_metadata import GET_DOCUMENT
 from ..infra.http import get_insee_http_client
-from ..models.insee import GetInseeDocumentInput, GetInseeDocumentOutput
-from ..services.insee_document import get_insee_document
+from ..models.insee import (
+    DocumentContentOutput,
+    DocumentUrls,
+    IncludeTableOfContents,
+    TruncateContent,
+)
+from ..services.insee_document import get_insee_document_service
 
 
 def register_get_insee_document(mcp: FastMCP) -> None:
-    @mcp.tool(
-        name=GET_DOCUMENT["tool_name"],
-        description=GET_DOCUMENT["tool_description"],
-        meta=GET_DOCUMENT["tool_metadata"],
-    )
-    async def get_insee_documents(
-        params: GetInseeDocumentInput,
+    @mcp.tool
+    async def get_insee_document(
         ctx: Context,
-    ) -> GetInseeDocumentOutput:
-        # Fixme: use singular or plural and stick to it
-        return await get_insee_document(params, http_client=get_insee_http_client(ctx))
+        document_urls: DocumentUrls,
+        include_table_of_contents: IncludeTableOfContents = True,
+        truncate_content: TruncateContent = True,
+    ) -> DocumentContentOutput:
+        """Fetch and parse INSEE publications from known URLs and return their full text in markdown.
+
+        Every per-URL entry carries the same keys whether it succeeded or failed, so results can be
+        iterated without type-sniffing.
+        """
+        return await get_insee_document_service(
+            document_urls=document_urls,
+            include_table_of_contents=include_table_of_contents,
+            truncate_content=truncate_content,
+            http_client=get_insee_http_client(ctx),
+        )

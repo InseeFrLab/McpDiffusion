@@ -6,12 +6,19 @@ from elasticsearch import ConnectionError as ESConnectionError
 from elasticsearch import TransportError
 from fastmcp import Context, FastMCP
 
-from ..config.tool_metadata import SEARCH_DOCUMENTS
 from ..core.errors import AppToolError
 from ..infra.elasticsearch import get_elasticsearch_client
 from ..models.insee import (
-    SearchInseeDocumentsInput,
-    SearchInseeDocumentsOutput,
+    DEFAULT_RESULT_COUNT,
+    DocumentSearchOutput,
+    GeoKeyword,
+    GeoLevel,
+    GeoLevelChoice,
+    NumberOfResults,
+    Query,
+    Theme,
+    ThemeChoice,
+    YearOfReference,
 )
 from ..services.insee_search import (
     apply_collection_filters,
@@ -23,27 +30,35 @@ from ..services.insee_search import (
 # Fixme: state clear conventions between what goes to a tool and what do not
 #   most of the code might belong in the service
 def register_search_insee_documents(mcp: FastMCP, *, index: str) -> None:
-    @mcp.tool(
-        name=SEARCH_DOCUMENTS["tool_name"],
-        description=SEARCH_DOCUMENTS["tool_description"],
-        meta=SEARCH_DOCUMENTS["tool_metadata"],
-    )
+    @mcp.tool
     async def search_insee_documents(
-        params: SearchInseeDocumentsInput,
         ctx: Context,
-    ) -> SearchInseeDocumentsOutput:
+        query: Query,
+        theme: Theme = ThemeChoice.ALL,
+        year_of_reference: YearOfReference = None,
+        geo_level: GeoLevel = GeoLevelChoice.FRANCE,
+        geo_keyword: GeoKeyword = None,
+        number_of_results: NumberOfResults = DEFAULT_RESULT_COUNT,
+    ) -> DocumentSearchOutput:
+        """Search the INSEE catalogue of official statistical publications (Insee Premiere, Insee
+        Analyses, Dossiers, References, Focus, ...). Returns structured publication records; pass the
+        URL of a record to `get_insee_document` to fetch the full text.
+
+        Write a rich natural-language query with synonyms, context, and the target year or geography
+        when relevant. For 'essentiel sur...' publications prefer `search_insee_chiffrecle`.
+        """
         must, filters, should = build_text_clauses(
-            query=params.query,
-            year_of_reference=params.year_of_reference,
+            query=query,
+            year_of_reference=year_of_reference,
         )
         filters, collection_should = apply_collection_filters(
             filters,
             must_not_rapides=True,
             must_only_rapides=False,
             chiffre_clef=False,
-            theme=params.theme,
-            geo_niveau=params.geo_niveau,
-            geo_keyword=params.geo_keyword,
+            theme=theme,
+            geo_level=geo_level,
+            geo_keyword=geo_keyword,
         )
         try:
             hits = await execute_search(
@@ -51,7 +66,7 @@ def register_search_insee_documents(mcp: FastMCP, *, index: str) -> None:
                 filters=filters,
                 should=should + collection_should,
                 minimum_should_match=1 if collection_should else 0,
-                number_of_results=params.number_of_results,
+                number_of_results=number_of_results,
                 es=get_elasticsearch_client(ctx),
                 index=index,
             )
@@ -61,4 +76,4 @@ def register_search_insee_documents(mcp: FastMCP, *, index: str) -> None:
                 f"INSEE documents search backend unreachable: {exc}. Verify ES_HOST and try again.",
                 retryable=True,
             )
-        return SearchInseeDocumentsOutput(results=hits, count=len(hits))
+        return DocumentSearchOutput(results=hits, count=len(hits))

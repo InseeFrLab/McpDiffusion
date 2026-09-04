@@ -3,15 +3,27 @@
 from __future__ import annotations
 
 from enum import StrEnum
+from typing import Annotated
 
 from pydantic import BaseModel, Field
 
+# ----------------------------------------------------------------------------------------------------------------------
+# Constants ------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
-# Fixme: Pydantic BaseModel inheriting can be leverage to avoid duplication through model composition
-#  (FastAPI provides great examples on that)
+# Fixme: a lot of values in here belongs in settings
+DEFAULT_RESULT_COUNT = 10
+MAX_RESULT_COUNT = 20
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+# Enumerations ---------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
+
+
 # Fixme: a lot of static data from this file seems derived from the one in the 'data' package
 #  this could be merged / refactored / better exploited
-class INSEETheme(StrEnum):
+class ThemeChoice(StrEnum):
     ALL = "ALL"
     METHODES = "Methodes"
     DEMOGRAPHIE = "Demographie"
@@ -25,7 +37,7 @@ class INSEETheme(StrEnum):
     TERRITOIRES = "Territoires, villes et quartiers"
 
 
-class INSEEGeo(StrEnum):
+class GeoLevelChoice(StrEnum):
     COM = "COM"
     DEP = "DEP"
     REG = "REG"
@@ -34,7 +46,7 @@ class INSEEGeo(StrEnum):
     FRANCE = "FRANCE"
 
 
-class ThemeConjoncture(StrEnum):
+class ThemeConjonctureChoice(StrEnum):
     INDUSTRY = "Industrial production and activity"
     BUILDING = "Construction and building sector"
     HOUSING = "Housing and real estate"
@@ -50,7 +62,136 @@ class ThemeConjoncture(StrEnum):
     FINANCE = "Business financing"
 
 
-# --- Shared output model ---
+# ----------------------------------------------------------------------------------------------------------------------
+# Tool parameters ------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
+
+# --- shared by the INSEE.fr search tools ---
+
+Query = Annotated[
+    str,
+    Field(
+        description="Natural-language search query describing the statistics to retrieve.",
+        examples=[
+            "population de Lyon",
+            "taux de chomage 2024",
+            "PIB France",
+        ],
+    ),
+]
+
+YearOfReference = Annotated[
+    int | None,
+    Field(description="Hard filter on publication year (e.g. 2024). Leave null to search all years."),
+]
+
+Theme = Annotated[
+    ThemeChoice,
+    Field(description="Optional top-level INSEE theme used to restrict the search. Default: ALL."),
+]
+
+GeoLevel = Annotated[
+    GeoLevelChoice,
+    Field(description="Geographic level to search. Codes: COM / DEP / REG / INTER / COMPRD / FRANCE."),
+]
+
+GeoKeyword = Annotated[
+    str | None,
+    Field(
+        description=(
+            "Geographic name to filter on (e.g. 'Paris', 'Occitanie', "
+            "'Bouches-du-Rhone'). Leave null to skip geographic filtering."
+        ),
+    ),
+]
+
+NumberOfResults = Annotated[
+    int,
+    Field(
+        description="Maximum number of results to return.",
+        ge=1,
+        le=MAX_RESULT_COUNT,
+    ),
+]
+
+# --- search_insee_conjoncture ---
+
+ConjonctureQuery = Annotated[
+    str,
+    Field(
+        description=(
+            "Natural-language query. The search is lexical and rewards "
+            "keyword breadth -- provide several synonyms and related notions."
+        ),
+        examples=[
+            "consommation",
+            "hotel",
+            "PIB",
+        ],
+    ),
+]
+
+ThemeConjoncture = Annotated[
+    ThemeConjonctureChoice | None,
+    Field(
+        description=(
+            "Optional broad category to restrict the search. Each category "
+            "contains multiple sub-themes. Leave null to search across all."
+        ),
+    ),
+]
+
+ConjonctureYearOfReference = Annotated[
+    int | None,
+    Field(
+        description=(
+            "Hard filter on publication year (e.g. 2024). Leave null to "
+            "search all years; for 'latest release' use cases, prefer "
+            "leaving null so the freshest match wins by score."
+        ),
+    ),
+]
+
+# --- get_insee_document ---
+
+DocumentUrls = Annotated[
+    list[str],
+    Field(
+        description=("List of relative URLs to retrieve (e.g. '/fr/statistiques/4277658?sommaire=4318291')."),
+        examples=[
+            ["/fr/statistiques/4277658?sommaire=4318291"],
+        ],
+    ),
+]
+
+IncludeTableOfContents = Annotated[
+    bool,
+    Field(
+        description=(
+            "If True, parse the page's table-of-contents section alongside "
+            "the main content. Use once to discover structure, then False "
+            "for subsequent requests on the same page."
+        ),
+    ),
+]
+
+TruncateContent = Annotated[
+    bool,
+    Field(
+        description=(
+            "If True (default), long markdown bodies are clipped to keep the "
+            "response compact for the model. Set to False only when the full "
+            "text is required."
+        ),
+    ),
+]
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+# Result models --------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
+
+# --- shared by the INSEE.fr search tools ---
 
 
 class DocumentHit(BaseModel):
@@ -75,147 +216,14 @@ class DocumentHit(BaseModel):
     url: str = Field(description="Relative URL ready to feed into `get_insee_document`.")
 
 
-# --- search_insee_documents ---
-# Fixme: use model composition to avoid duplication
-class SearchInseeDocumentsInput(BaseModel):
-    query: str = Field(
-        description="Natural-language search query describing the statistics to retrieve.",
-        examples=["population de Lyon", "taux de chomage 2024", "PIB France"],
-    )
-    theme: INSEETheme = Field(
-        default=INSEETheme.ALL,
-        description="Optional top-level INSEE theme used to restrict the search. Default: ALL.",
-    )
-    year_of_reference: int | None = Field(
-        default=None,
-        description=("Hard filter on publication year (e.g. 2024). Leave null to search all years."),
-    )
-    geo_niveau: INSEEGeo = Field(
-        default=INSEEGeo.FRANCE,
-        description="Geographic level to search. Codes: COM / DEP / REG / INTER / COMPRD / FRANCE.",
-    )
-    geo_keyword: str | None = Field(
-        default=None,
-        description=(
-            "Geographic name to filter on (e.g. 'Paris', 'Occitanie', "
-            "'Bouches-du-Rhone'). Leave null to skip geographic filtering."
-        ),
-    )
-    # Fixme: this field annotation is used multiple times and can be put in a variable to avoid duplication
-    # Fixme: magic values should be avoided
-    number_of_results: int = Field(
-        default=10,
-        description="Maximum number of results to return.",
-        ge=1,
-        le=20,
-    )
+class DocumentSearchOutput(BaseModel):
+    """Result envelope shared by every INSEE.fr search tool."""
 
-
-# Fixme: the same model shape is used 3 times
-class SearchInseeDocumentsOutput(BaseModel):
-    results: list[DocumentHit]
-    count: int
-
-
-# --- search_insee_chiffrecle ---
-
-
-class SearchInseeChiffrecleInput(BaseModel):
-    query: str = Field(
-        description="Natural-language search query describing the statistics to retrieve.",
-        examples=["population de Lyon", "taux de chomage 2024", "PIB France"],
-    )
-    year_of_reference: int | None = Field(
-        default=None,
-        description=("Hard filter on publication year (e.g. 2024). Leave null to search all years."),
-    )
-    geo_niveau: INSEEGeo = Field(
-        default=INSEEGeo.FRANCE,
-        description="Geographic level to search. Codes: COM / DEP / REG / INTER / COMPRD / FRANCE.",
-    )
-    geo_keyword: str | None = Field(
-        default=None,
-        description=(
-            "Geographic name to filter on (e.g. 'Paris', 'Occitanie', "
-            "'Bouches-du-Rhone'). Leave null to skip geographic filtering."
-        ),
-    )
-    number_of_results: int = Field(
-        default=10,
-        description="Maximum number of results to return.",
-        ge=1,
-        le=20,
-    )
-
-
-class SearchInseeChiffrecleOutput(BaseModel):
-    results: list[DocumentHit]
-    count: int
-
-
-# --- search_insee_conjoncture ---
-
-
-class SearchInseeConjonctureInput(BaseModel):
-    query: str = Field(
-        description=(
-            "Natural-language query. The search is lexical and rewards "
-            "keyword breadth -- provide several synonyms and related notions."
-        ),
-        examples=["consommation", "hotel", "PIB"],
-    )
-    theme_conjoncture: ThemeConjoncture | None = Field(
-        default=None,
-        description=(
-            "Optional broad category to restrict the search. Each category "
-            "contains multiple sub-themes. Leave null to search across all."
-        ),
-    )
-    year_of_reference: int | None = Field(
-        default=None,
-        description=(
-            "Hard filter on publication year (e.g. 2024). Leave null to "
-            "search all years; for 'latest release' use cases, prefer "
-            "leaving null so the freshest match wins by score."
-        ),
-    )
-    number_of_results: int = Field(
-        default=10,
-        description="Maximum number of results to return.",
-        ge=1,
-        le=20,
-    )
-
-
-class SearchInseeConjonctureOutput(BaseModel):
     results: list[DocumentHit]
     count: int
 
 
 # --- get_insee_document ---
-
-
-class GetInseeDocumentInput(BaseModel):
-    list_of_url: list[str] = Field(
-        description=("List of relative URLs to retrieve (e.g. '/fr/statistiques/4277658?sommaire=4318291')."),
-        examples=[["/fr/statistiques/4277658?sommaire=4318291"]],
-    )
-    include_sommaire: bool = Field(
-        default=True,
-        description=(
-            "If True, parse the page's table-of-contents section alongside "
-            "the main content. Use once to discover structure, then False "
-            "for subsequent requests on the same page."
-        ),
-    )
-    truncate_content: bool = Field(
-        default=True,
-        description=(
-            "If True (default), long markdown bodies are clipped to keep the "
-            "response compact for the model. Set to False only when the full "
-            "text is required."
-        ),
-    )
 
 
 class DocumentResult(BaseModel):
@@ -226,7 +234,7 @@ class DocumentResult(BaseModel):
         default=None,
         description=(
             "Parsed table of contents as "
-            "{category: {title: url}}. None when include_sommaire=False "
+            "{category: {title: url}}. None when include_table_of_contents=False "
             "or when the page has no sommaire."
         ),
     )
@@ -240,7 +248,7 @@ class DocumentResult(BaseModel):
     )
 
 
-class GetInseeDocumentOutput(BaseModel):
+class DocumentContentOutput(BaseModel):
     results: list[DocumentResult]
     count: int
 

@@ -8,6 +8,7 @@
 # The tool description used to promise `mainIndicators` with a per-indicator link to pass to
 # `get_insee_document`, plus `lastArticles` and `keyGraphics`. None of that was ever produced. It is
 # recorded here because it says what the tool was meant to be, and is worth raising in that decision.
+# Fixme: i feel this list can be typed, or at least the objects within
 KEY_INDICATORS = [
     {
         "cle": "estimation de population France",

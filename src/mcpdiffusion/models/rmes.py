@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, Field
 
-# --- Shared RMES constants exposed to tools ---
+# ----------------------------------------------------------------------------------------------------------------------
+# Constants ------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
 # Fixme: a lot of values in here belongs in settings
 DEFAULT_QUERY_TIMEOUT_SECONDS = 20.0
@@ -18,7 +20,9 @@ MAX_ROW_LIMIT = 2000
 GRAPH_BASE = "http://rdf.insee.fr/graphes/"
 
 
-# --- Graph taxonomy ---
+# ----------------------------------------------------------------------------------------------------------------------
+# Enumerations ---------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
 
 class GraphCategoryChoice(StrEnum):
@@ -38,36 +42,101 @@ class GraphCategoryChoice(StrEnum):
     AUTRE = "autre"
 
 
-class GraphRow(BaseModel):
-    graph: str
-    triples: int
+# ----------------------------------------------------------------------------------------------------------------------
+# Tool parameters ------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
+# --- search_rmes_graphs ---
 
-# --- RMES_list_graphs ---
-
-
-class ListGraphsInput(BaseModel):
-    contains: str | None = Field(
-        default=None,
+GraphUriSubstring = Annotated[
+    str | None,
+    Field(
         description=(
             "Filtre les graphes dont l'URI contient cette sous-chaine (insensible a la "
             "casse), ex. 'naf' ou 'qualite/rapport'. Active automatiquement le detail "
             "complet (`graphs`) dans les categories retenues."
         ),
-        examples=["naf", "qualite/rapport", "geo"],
-    )
-    category: GraphCategoryChoice = Field(
-        default=GraphCategoryChoice.ALL,
-        description="Categorie de graphes a cibler.",
-    )
-    expand: bool = Field(
-        default=False,
+        examples=[
+            "naf",
+            "qualite/rapport",
+            "geo",
+        ],
+    ),
+]
+
+GraphCategory = Annotated[
+    GraphCategoryChoice,
+    Field(description="Categorie de graphes a cibler."),
+]
+
+ExpandGraphs = Annotated[
+    bool,
+    Field(
         description=(
             "Si True, inclut la liste complete des graphes (URI + nb de triplets) pour "
             "chaque categorie retenue, au lieu de seulement quelques exemples. Se "
-            "declenche automatiquement si `contains` est fourni ou `category != ALL`."
+            "declenche automatiquement si `graph_uri_substring` est fourni ou `graph_category != ALL`."
         ),
-    )
+    ),
+]
+
+# --- describe_rmes_resource ---
+
+ResourceUri = Annotated[
+    str,
+    Field(
+        description="URI complete de la ressource RDF a decrire.",
+        examples=[
+            "http://id.insee.fr/codes/naf2025/section/A",
+        ],
+    ),
+]
+
+GraphUri = Annotated[
+    str | None,
+    Field(
+        description=(
+            "URI d'un graphe nomme pour restreindre la recherche. Sans cette valeur (None par defaut), "
+            "la recherche se fait sur tous les graphes (plus lent)."
+        ),
+    ),
+]
+
+# --- run_rmes_sparql ---
+
+SparqlQuery = Annotated[
+    str,
+    Field(description="Requete SPARQL complete (SELECT / ASK / CONSTRUCT / DESCRIBE)."),
+]
+
+TimeoutSeconds = Annotated[
+    float,
+    Field(
+        description=f"Timeout en secondes (plafonne a {MAX_QUERY_TIMEOUT_SECONDS}s).",
+        gt=0,
+    ),
+]
+
+MaxRows = Annotated[
+    int,
+    Field(
+        description=f"Limite de lignes ajoutee si absente de la requete (plafonnee a {MAX_ROW_LIMIT}).",
+        ge=1,
+        le=MAX_ROW_LIMIT,
+    ),
+]
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+# Result models --------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
+
+# --- search_rmes_graphs ---
+
+
+class GraphRow(BaseModel):
+    graph: str
+    triples: int
 
 
 class CategoryBucket(BaseModel):
@@ -80,27 +149,12 @@ class CategoryBucket(BaseModel):
     graphs: list[GraphRow] | None = None
 
 
-class ListGraphsOutput(BaseModel):
+class GraphsOutput(BaseModel):
     total_graphs_matched: int
     categories: list[CategoryBucket]
 
 
-# --- RMES_describe_resource ---
-
-
-class DescribeResourceInput(BaseModel):
-    uri: str = Field(
-        description="URI complete de la ressource RDF a decrire.",
-        examples=["http://id.insee.fr/codes/naf2025/section/A"],
-    )
-    # Fixme: either use Optional or the modern pipe syntax, but avoid mixing
-    graph: str | None = Field(
-        default=None,
-        description=(
-            "URI d'un graphe nomme pour restreindre la recherche. Sans cette valeur (None par defaut), "
-            "la recherche se fait sur tous les graphes (plus lent)."
-        ),
-    )
+# --- describe_rmes_resource ---
 
 
 class ResourceProperty(BaseModel):
@@ -112,33 +166,16 @@ class ResourceProperty(BaseModel):
     lang: str | None = None
 
 
-class DescribeResourceOutput(BaseModel):
+class ResourceOutput(BaseModel):
     uri: str
     properties: list[ResourceProperty]
     count: int
 
 
-# --- RMES_run_sparql ---
+# --- run_rmes_sparql ---
 
 
-class RunSparqlInput(BaseModel):
-    full_sparql_query: str = Field(
-        description="Requete SPARQL complete (SELECT / ASK / CONSTRUCT / DESCRIBE).",
-    )
-    timeout: float = Field(
-        default=DEFAULT_QUERY_TIMEOUT_SECONDS,
-        description=f"Timeout en secondes (plafonne a {MAX_QUERY_TIMEOUT_SECONDS}s).",
-        gt=0,
-    )
-    max_rows: int = Field(
-        default=DEFAULT_ROW_LIMIT,
-        description=f"Limite de lignes ajoutee si absente de la requete (plafonnee a {MAX_ROW_LIMIT}).",
-        ge=1,
-        le=MAX_ROW_LIMIT,
-    )
-
-
-class RunSparqlOutput(BaseModel):
+class SparqlOutput(BaseModel):
     format: Literal["json", "turtle"] = "json"
     limit_added: int | None = None
     hint: str | None = None

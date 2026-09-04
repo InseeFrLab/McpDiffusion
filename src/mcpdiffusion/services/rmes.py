@@ -12,6 +12,7 @@ from typing import Any
 
 import httpx
 
+from ..core.errors import AppToolError
 from ..models.rmes import (
     DEFAULT_QUERY_TIMEOUT_SECONDS,
     GRAPH_BASE,
@@ -24,8 +25,6 @@ from ..models.rmes import (
     ListGraphsOutput,
     ResourceProperty,
     RunSparqlOutput,
-    SparqlError,
-    SparqlErrorType,
     RunSparqlInput,
     DescribeResourceInput,
     ListGraphsInput,
@@ -79,12 +78,12 @@ class _CategoryRule:
         self.match = match
 
 
-def _exact(*paths: str) -> CategoryMatcher:
+def _match_exact(*paths: str) -> CategoryMatcher:
     allowed = set(paths)
     return lambda path: path in allowed
 
 
-def _prefix(prefix: str) -> CategoryMatcher:
+def _match_prefix(prefix: str) -> CategoryMatcher:
     return lambda path: path.startswith(prefix)
 
 
@@ -98,7 +97,7 @@ CATEGORY_DEFS: list[_CategoryRule] = [
             "(pertinence, precision, actualite, coherence...) sous forme de "
             "sdmx-mm:ReportedAttribute. Tous ces graphes ont un schema identique."
         ),
-        match=_prefix("qualite/rapport/"),
+        match=_match_prefix("qualite/rapport/"),
     ),
     _CategoryRule(
         key="qualite_referentiels",
@@ -107,7 +106,7 @@ CATEGORY_DEFS: list[_CategoryRule] = [
             "Vocabulaire SIMS-FR (simsv2fr), documents annexes (documents) et referentiel "
             "territorial (territoires) associes aux rapports qualite."
         ),
-        match=_exact("qualite/documents", "qualite/simsv2fr", "qualite/territoires"),
+        match=_match_exact("qualite/documents", "qualite/simsv2fr", "qualite/territoires"),
     ),
     _CategoryRule(
         key="codes_concepts_generiques",
@@ -118,7 +117,7 @@ CATEGORY_DEFS: list[_CategoryRule] = [
             "notes explicatives xkos. Ce n'est PAS une nomenclature metier -- voir "
             "'nomenclatures' pour NAF/PCS/COICOP/etc."
         ),
-        match=_exact("codes", "codes/nomenclatures"),
+        match=_match_exact("codes", "codes/nomenclatures"),
     ),
     _CategoryRule(
         key="nomenclatures",
@@ -130,7 +129,7 @@ CATEGORY_DEFS: list[_CategoryRule] = [
             "juridiques (CJ), emplois (EAP/EMB par annee), tables de correspondance entre "
             "versions (ex: nafr2-cpfr21)."
         ),
-        match=_prefix("codes/"),
+        match=_match_prefix("codes/"),
     ),
     _CategoryRule(
         key="operations_statistiques",
@@ -140,19 +139,19 @@ CATEGORY_DEFS: list[_CategoryRule] = [
             "d'enquetes/collectes de l'Insee. C'est la cible (sdmx-mm:target) de chaque "
             "rapport qualite."
         ),
-        match=_exact("operations"),
+        match=_match_exact("operations"),
     ),
     _CategoryRule(
         key="demographie",
         label="Demographie",
         description="Populations legales par annee (popleg<annee>).",
-        match=_prefix("demo/"),
+        match=_match_prefix("demo/"),
     ),
     _CategoryRule(
         key="geographie",
         label="Geographie",
         description="Code officiel geographique (COG) : communes, decoupages administratifs.",
-        match=_prefix("geo/"),
+        match=_match_prefix("geo/"),
     ),
     _CategoryRule(
         key="organisations",
@@ -161,25 +160,25 @@ CATEGORY_DEFS: list[_CategoryRule] = [
             "Organismes producteurs de statistiques (services statistiques ministeriels...) "
             "et unites organisationnelles internes de l'Insee."
         ),
-        match=_prefix("organisations"),
+        match=_match_prefix("organisations"),
     ),
     _CategoryRule(
         key="concepts",
         label="Concepts et definitions statistiques",
         description="Themes statistiques et definitions de notions utilisees dans les publications.",
-        match=_prefix("concepts"),
+        match=_match_prefix("concepts"),
     ),
     _CategoryRule(
         key="produits",
         label="Produits / indicateurs statistiques",
         description="Indicateurs statistiques publies (StatisticalIndicator).",
-        match=_exact("produits"),
+        match=_match_exact("produits"),
     ),
     _CategoryRule(
         key="catalogue",
         label="Catalogue DCAT",
         description="Metadonnees de catalogage (dcat:Dataset, dcat:CatalogRecord).",
-        match=_exact("catalogue"),
+        match=_match_exact("catalogue"),
     ),
     _CategoryRule(
         key="ontologies",
@@ -189,7 +188,7 @@ CATEGORY_DEFS: list[_CategoryRule] = [
             "qui structurent les autres graphes. A consulter pour comprendre le schema "
             "d'un graphe de donnees, pas pour y chercher des donnees elles-memes."
         ),
-        match=_prefix("def/"),
+        match=_match_prefix("def/"),
     ),
 ]
 
@@ -207,14 +206,14 @@ _CATEGORY_AUTRE = _CategoryRule(
 _ALL_RULES = CATEGORY_DEFS + [_CATEGORY_AUTRE]
 
 
-def _relative_path(graph_uri: str) -> str:
+def _strip_graph_base(graph_uri: str) -> str:
     if graph_uri.startswith(GRAPH_BASE):
         return graph_uri[len(GRAPH_BASE):]
     return graph_uri
 
 
 def _categorize(graph_uri: str) -> _CategoryRule:
-    path = _relative_path(graph_uri)
+    path = _strip_graph_base(graph_uri)
     for cat in CATEGORY_DEFS:
         if cat.match(path):
             return cat
@@ -252,12 +251,6 @@ def _accept_header(query_form: str) -> str:
     return "text/turtle"
 
 
-def _error_payload(error_type: SparqlErrorType, message: str, query: str, **extra: Any) -> dict[str, Any]:
-    payload = {"type": error_type, "message": message, "query": query}
-    payload.update(extra)
-    return {"error": payload}
-
-
 # ---------------------------------------------------------------------------
 # Low-level SPARQL execution
 # ---------------------------------------------------------------------------
@@ -273,11 +266,10 @@ async def _execute_sparql(
     query_form = _detect_query_form(query)
 
     if query_form == "UNKNOWN":
-        return _error_payload(
-            SparqlErrorType.INVALID_QUERY_FORM,
+        raise AppToolError(
+            "INVALID_QUERY",
             "Impossible de detecter SELECT / ASK / CONSTRUCT / DESCRIBE dans la requete. "
             "Verifie la syntaxe SPARQL (pas GraphQL).",
-            query,
         )
 
     effective_query, limit_added = _ensure_limit(query, query_form, max_rows)
@@ -294,45 +286,45 @@ async def _execute_sparql(
         response.raise_for_status()
 
     except httpx.TimeoutException:
-        return _error_payload(
-            SparqlErrorType.TIMEOUT,
-            f"Le endpoint n'a pas repondu en moins de {timeout}s. "
+        raise AppToolError(
+            "BACKEND_UNAVAILABLE",
+            f"Le endpoint RMES n'a pas repondu en moins de {timeout}s. "
             "Restreins la requete (ajoute une clause GRAPH precise, reduis le LIMIT, "
             "evite les scans sans filtre sur tous les graphes).",
-            query,
+            retryable=True,
         )
 
     except httpx.HTTPStatusError as exc:
         status = exc.response.status_code
         body = exc.response.text[:2000]
         if status == 400:
-            return _error_payload(
-                SparqlErrorType.SYNTAX_ERROR,
-                "Le endpoint a rejete la requete (erreur de syntaxe SPARQL probable).",
-                query,
-                endpoint_message=body,
+            raise AppToolError(
+                "INVALID_QUERY",
+                f"Le endpoint RMES a rejete la requete (erreur de syntaxe SPARQL probable) : {body}",
             )
-        return _error_payload(
-            SparqlErrorType.HTTP_ERROR,
-            f"Le endpoint a repondu {status}.",
-            query,
-            endpoint_message=body,
+        raise AppToolError(
+            "UPSTREAM_ERROR",
+            f"Le endpoint RMES a repondu {status} : {body}",
+            retryable=(500 <= status < 600),
         )
 
     except httpx.RequestError as exc:
-        logger.warning("Erreur reseau vers %s: %s", endpoint, exc)
-        return _error_payload(
-            SparqlErrorType.NETWORK_ERROR,
+        raise AppToolError(
+            "BACKEND_UNAVAILABLE",
             f"Impossible de contacter l'endpoint RMES ({type(exc).__name__}).",
-            query,
+            retryable=True,
         )
 
     if accept == "text/turtle":
         return {"format": "turtle", "limit_added": limit_added, "data": response.text}
 
-    # Fixme: if the parsing of the response fails, it will lead to an unhandled exception
-    #  as this line of code is not wrapped within the try except block
-    result = response.json()
+    try:
+        result = response.json()
+    except ValueError as exc:
+        raise AppToolError(
+            "PARSE_ERROR",
+            f"Le endpoint RMES a renvoye une reponse non-JSON : {exc}",
+        )
     if limit_added:
         result.setdefault("_meta", {})["limit_added"] = max_rows
         result["_meta"]["hint"] = (
@@ -347,7 +339,7 @@ async def _get_raw_graph_rows(
     *,
     sparql_client: httpx.AsyncClient,
     endpoint: str,
-) -> dict[str, Any]:
+) -> list[dict[str, Any]]:
     now = time.time()
     if _GRAPH_CACHE["data"] is None or (now - _GRAPH_CACHE["ts"]) > _GRAPH_CACHE_TTL:
         query = (
@@ -365,8 +357,6 @@ async def _get_raw_graph_rows(
             sparql_client=sparql_client,
             endpoint=endpoint,
         )
-        if "error" in result:
-            return result
         rows = [
             {"graph": b["g"]["value"], "triples": int(b["nbTriples"]["value"])}
             for b in result["results"]["bindings"]
@@ -374,7 +364,7 @@ async def _get_raw_graph_rows(
         _GRAPH_CACHE["data"] = rows
         _GRAPH_CACHE["ts"] = now
 
-    return {"rows": _GRAPH_CACHE["data"]}
+    return _GRAPH_CACHE["data"]
 
 
 # ---------------------------------------------------------------------------
@@ -411,16 +401,10 @@ async def list_graphs(
     sparql_client: httpx.AsyncClient,
     endpoint: str,
 ) -> ListGraphsOutput:
-    raw = await _get_raw_graph_rows(
-        sparql_client=sparql_client, endpoint=endpoint,
+    rows = await _get_raw_graph_rows(
+        sparql_client=sparql_client,
+        endpoint=endpoint,
     )
-    if "error" in raw:
-        return ListGraphsOutput(
-            total_graphs_matched=0,
-            categories=[],
-            error=SparqlError(**raw["error"]),
-        )
-    rows = raw["rows"]
     expand = params.expand
 
     if params.contains:
@@ -492,11 +476,6 @@ async def describe_resource(
         sparql_client=sparql_client, endpoint=endpoint,
     )
 
-    if "error" in result:
-        return DescribeResourceOutput(
-            uri=params.uri, properties=[], count=0, error=SparqlError(**result["error"])
-        )
-
     properties = _parse_bindings_to_properties(result["results"]["bindings"])
     return DescribeResourceOutput(uri=params.uri, properties=properties, count=len(properties))
 
@@ -508,12 +487,9 @@ async def run_sparql(
     endpoint: str,
 ) -> RunSparqlOutput:
     if not params.full_sparql_query or not params.full_sparql_query.strip():
-        return RunSparqlOutput(
-            error=SparqlError(
-                type=SparqlErrorType.EMPTY_QUERY,
-                message="La requete est vide.",
-                query=params.full_sparql_query,
-            )
+        raise AppToolError(
+            "INVALID_INPUT",
+            "La requete SPARQL est vide. Fournis une requete SELECT, ASK, CONSTRUCT ou DESCRIBE.",
         )
 
     max_rows = max(1, min(params.max_rows, MAX_ROW_LIMIT))
@@ -521,9 +497,6 @@ async def run_sparql(
         params.full_sparql_query, timeout=params.timeout, max_rows=max_rows,
         sparql_client=sparql_client, endpoint=endpoint,
     )
-
-    if "error" in result:
-        return RunSparqlOutput(error=SparqlError(**result["error"]))
 
     if result.get("format") == "turtle":
         return RunSparqlOutput(

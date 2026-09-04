@@ -7,7 +7,7 @@ from elasticsearch.dsl import Q
 from fastmcp import Context, FastMCP
 
 from ..config.tool_metadata import SEARCH_CONJONCTURE
-from ..core.errors import fail
+from ..core.errors import AppToolError
 from ..data.themes import DICT_THEME_CONJ
 from ..infra.elasticsearch import get_elasticsearch_client
 from ..models.insee import (
@@ -59,12 +59,10 @@ def register_search_insee_conjoncture(mcp: FastMCP, *, index: str) -> None:
                 index=index,
             )
         except (ESConnectionError, TransportError) as exc:
-            fail(
+            raise AppToolError(
                 "BACKEND_UNAVAILABLE",
                 f"INSEE conjoncture search backend unreachable: {exc}. "
                 "Verify ES_HOST and try again.",
                 retryable=True,
             )
-            # Fixme: as stated, this raise is dead
-            raise
         return SearchInseeConjonctureOutput(results=hits, count=len(hits))

@@ -8,7 +8,7 @@ from elasticsearch import AsyncElasticsearch
 from elasticsearch import ConnectionError as ESConnectionError
 from elasticsearch import TransportError
 
-from ..core.errors import fail
+from ..core.errors import AppToolError
 from ..models.melodi import (
     ColumnResult,
     DatasetSearchResult,
@@ -37,17 +37,16 @@ async def get_melodi_observations(
         response.raise_for_status()
     # Fixme: the following problematic error handling pattern has already been adressed
     except httpx.TimeoutException as exc:
-        fail(
+        raise AppToolError(
             "BACKEND_UNAVAILABLE",
             f"Melodi API timed out calling {url}: {exc}. Try again or narrow the query.",
             retryable=True,
         )
-        raise
     except httpx.HTTPStatusError as exc:
         status = exc.response.status_code
         body_excerpt = (exc.response.text or "")[:500]
         if status == 400:
-            fail(
+            raise AppToolError(
                 "INVALID_INPUT",
                 f"Melodi API rejected the query (HTTP 400). "
                 f"Columns/values passed: {params.dict_of_columns_and_values}. "
@@ -55,38 +54,35 @@ async def get_melodi_observations(
                 "Verify modality codes with `search_melodi_modalities`.",
             )
         elif status == 404:
-            fail(
+            raise AppToolError(
                 "NOT_FOUND",
                 f"Melodi dataset {params.dataset_id!r} not found (HTTP 404). "
                 "Check the dataset_id with `search_melodi_datasets`.",
             )
         else:
-            fail(
+            raise AppToolError(
                 "UPSTREAM_ERROR",
                 f"Melodi API returned HTTP {status}: {body_excerpt}",
                 retryable=(500 <= status < 600),
             )
-        raise
     except httpx.HTTPError as exc:
-        fail(
+        raise AppToolError(
             "BACKEND_UNAVAILABLE",
             f"Could not reach Melodi API at {url}: {exc}",
             retryable=True,
         )
-        raise
 
     try:
         payload = response.json()
     except ValueError as exc:
-        fail(
+        raise AppToolError(
             "PARSE_ERROR",
             f"Melodi API returned non-JSON response: {exc}",
         )
-        raise
 
     observations = payload.get("observations") if isinstance(payload, dict) else None
     if not isinstance(observations, list):
-        fail(
+        raise AppToolError(
             "PARSE_ERROR",
             "Melodi API response did not contain an 'observations' list.",
         )
@@ -205,13 +201,12 @@ async def search_melodi_datasets(
             body=body,
         )
     except (ESConnectionError, TransportError) as exc:
-        fail(
+        raise AppToolError(
             "BACKEND_UNAVAILABLE",
             f"Melodi datasets search backend unreachable: {exc}. "
             "Verify ES_HOST and try again.",
             retryable=True,
         )
-        raise
 
     results: list[DatasetSearchResult] = []
     for hit in ds_res.get("hits", {}).get("hits", []):
@@ -284,13 +279,12 @@ async def search_melodi_modalities(
             },
         )
     except (ESConnectionError, TransportError) as exc:
-        fail(
+        raise AppToolError(
             "BACKEND_UNAVAILABLE",
             f"Melodi columns search backend unreachable: {exc}. "
             "Verify ES_HOST and try again.",
             retryable=True,
         )
-        raise
 
     results: list[ColumnResult] = []
     for hit in ds_column.get("hits", {}).get("hits", []):
@@ -320,13 +314,4 @@ async def search_melodi_modalities(
             )
         )
 
-    if not results:
-        fail(
-            "EMPTY_RESULT",
-            f"No modalities matched for dataset_id={params.dataset_id!r}, "
-            f"columns_id={params.columns_id!r}, "
-            f"french_query={params.french_query!r}. "
-            "Verify the dataset_id and column ids with `search_melodi_datasets`, "
-            "then try a broader French query.",
-        )
     return SearchMelodiModalitiesOutput(results=results)

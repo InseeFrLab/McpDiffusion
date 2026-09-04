@@ -15,7 +15,7 @@ from datetime import date
 
 # Fixme: I'd put such a generic function in a separate module
 #   just a preference, not mandatory
-def current_date_iso() -> str:
+def compute_current_date_iso() -> str:
     """Return today's date as ISO-8601."""
     return date.today().isoformat()
 
@@ -210,7 +210,7 @@ SEARCH_DOCUMENTS = {
         "List of publications: `{ id, score, titre, soustitre, chapo, "
         "anneediffusion, zone, theme, url }`. Feed `url` to `get_insee_document`.\n"
         "\n"
-        f"Current date is {current_date_iso()}.\n"
+        f"Current date is {compute_current_date_iso()}.\n"
     ),
     "tool_metadata": {"version": "6.0", "author": "mirlon"},
 }
@@ -260,7 +260,7 @@ SEARCH_CONJONCTURE = {
         "A list of publications: `{ id, score, titre, soustitre, chapo, "
         "anneediffusion, zone, theme, url }`.\n"
         "\n"
-        f"Current date is {current_date_iso()}.\n"
+        f"Current date is {compute_current_date_iso()}.\n"
     ),
     "tool_metadata": {"version": "5.0", "author": "mirlon"},
 }
@@ -293,7 +293,7 @@ GET_HOMEPAGE = {
         "3. Follow up with `search_insee_documents` or `search_insee_conjoncture` "
         "only if the user needs deeper tables or historic series.\n"
         "\n"
-        f"Current date is {current_date_iso()}.\n"
+        f"Current date is {compute_current_date_iso()}.\n"
     ),
     "tool_metadata": {"version": "5.0", "author": "mirlon"},
 }

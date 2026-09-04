@@ -37,26 +37,6 @@ class GraphCategoryChoice(StrEnum):
     AUTRE = "autre"
 
 
-# --- Error types ---
-
-# Fixme: I am afraid these error models might compete with what is defined in 'core/errors.py'
-#   We should provide uniform errors accros the application to simply parsing for clients
-class SparqlErrorType(StrEnum):
-    INVALID_QUERY_FORM = "INVALID_QUERY_FORM"
-    TIMEOUT = "TIMEOUT"
-    SYNTAX_ERROR = "SYNTAX_ERROR"
-    HTTP_ERROR = "HTTP_ERROR"
-    NETWORK_ERROR = "NETWORK_ERROR"
-    EMPTY_QUERY = "EMPTY_QUERY"
-
-
-class SparqlError(BaseModel):
-    type: SparqlErrorType
-    message: str
-    query: str
-    endpoint_message: Optional[str] = None
-
-
 class GraphRow(BaseModel):
     graph: str
     triples: int
@@ -101,7 +81,6 @@ class CategoryBucket(BaseModel):
 class ListGraphsOutput(BaseModel):
     total_graphs_matched: int
     categories: list[CategoryBucket]
-    error: Optional[SparqlError] = None
 
 
 # --- RMES_describe_resource ---
@@ -134,7 +113,6 @@ class DescribeResourceOutput(BaseModel):
     uri: str
     properties: list[ResourceProperty]
     count: int
-    error: Optional[SparqlError] = None
 
 
 # --- RMES_run_sparql ---
@@ -163,4 +141,3 @@ class RunSparqlOutput(BaseModel):
     variables: Optional[list[str]] = None
     bindings: Optional[list[dict[str, Any]]] = None
     turtle: Optional[str] = None
-    error: Optional[SparqlError] = None

@@ -20,6 +20,9 @@ logger = logging.getLogger(__name__)
 
 mcp = FastMCP(
     "INSEE-mcp-diffusion",
+    # Only AppToolError messages reach the caller; anything else is a bug and is replaced
+    # by a generic message.
+    mask_error_details=True,
     lifespan=build_lifespan(
         es_host=settings.es_host,
         es_tls_verify=settings.es_tls_verify,
@@ -40,7 +43,10 @@ register_tools(mcp, settings)
 # None of them logs how many results a tool returned. If empty results become hard to diagnose, add an
 # `on_call_tool` middleware that inspects the ToolResult, or have the tool report it with `ctx.info`.
 mcp.add_middleware(
-    ErrorHandlingMiddleware(),
+    # transform_errors would promote our ToolErrors to JSON-RPC protocol errors labelled
+    # "Internal error", losing is_error and the message the LLM is meant to act on. We only
+    # want the logging and error counting.
+    ErrorHandlingMiddleware(transform_errors=False),
 )
 mcp.add_middleware(
     SlidingWindowRateLimitingMiddleware(

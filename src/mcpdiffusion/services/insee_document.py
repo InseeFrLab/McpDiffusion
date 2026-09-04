@@ -8,14 +8,18 @@ from bs4 import BeautifulSoup
 from trafilatura import extract
 from trafilatura.settings import Extractor
 
+import logging
+
 import httpx
 
-from ..core.errors import fail
+from ..core.errors import AppToolError
 from ..models.insee import (
     DocumentResult,
     GetInseeDocumentInput,
     GetInseeDocumentOutput,
 )
+
+logger = logging.getLogger(__name__)
 
 _TRAFILATURA_OPTIONS = Extractor(
     output_format="markdown",
@@ -104,42 +108,47 @@ def _truncate(text: str, limit: int = _MAX_MARKDOWN_CHARS) -> tuple[str, bool]:
 
 async def _fetch_html(url: str, http_client: httpx.AsyncClient) -> str:
     # A relative path resolves against the client's base_url; an absolute one overrides it.
+    target = http_client.base_url.join(url)
     try:
         response = await http_client.get(url, follow_redirects=True)
         response.raise_for_status()
         return response.text
-    # Fixme: the error handling is not correctly designed, at a global scale
-    # Fixme: for example, here, the 'fail' invocation raises a ToolError nesting any information within a string
-    #   so an error is logged twice and the client ultimately receives an error string
-    #   he can hardly react on automatically
     except httpx.TimeoutException as exc:
-        fail(
+        raise AppToolError(
             "BACKEND_UNAVAILABLE",
-            f"insee.fr timed out fetching {full_url}: {exc}",
+            f"insee.fr timed out fetching {target}: {exc}",
             retryable=True,
         )
-        raise
     except httpx.HTTPStatusError as exc:
         if exc.response.status_code == 404:
-            fail(
+            raise AppToolError(
                 "NOT_FOUND",
-                f"INSEE document not found at {full_url} (HTTP 404). "
+                f"INSEE document not found at {target} (HTTP 404). "
                 "Verify the URL with `search_insee_documents`.",
             )
         else:
-            fail(
+            raise AppToolError(
                 "UPSTREAM_ERROR",
-                f"insee.fr returned HTTP {exc.response.status_code} for {full_url}.",
+                f"insee.fr returned HTTP {exc.response.status_code} for {target}.",
                 retryable=(500 <= exc.response.status_code < 600),
             )
-        raise
     except httpx.HTTPError as exc:
-        fail(
+        raise AppToolError(
             "BACKEND_UNAVAILABLE",
-            f"Network error fetching {full_url}: {exc}",
+            f"Network error fetching {target}: {exc}",
             retryable=True,
         )
-        raise
+
+
+def _build_failed_document(url: object, message: str) -> DocumentResult:
+    return DocumentResult(
+        id=str(url),
+        status="error",
+        markdown_content=None,
+        sommaire=None,
+        truncated=False,
+        error=message,
+    )
 
 
 async def get_insee_document(
@@ -148,7 +157,7 @@ async def get_insee_document(
     http_client: httpx.AsyncClient,
 ) -> GetInseeDocumentOutput:
     if not params.list_of_url:
-        fail(
+        raise AppToolError(
             "INVALID_INPUT",
             "list_of_url must contain at least one URL. "
             "Use `search_insee_documents` to find URLs first.",
@@ -181,16 +190,12 @@ async def get_insee_document(
                     error=None,
                 )
             )
-        except Exception as exc:
-            results.append(
-                DocumentResult(
-                    id=str(url),
-                    status="error",
-                    markdown_content=None,
-                    sommaire=None,
-                    truncated=False,
-                    error=f"{type(exc).__name__}: {str(exc)[:500]}",
-                )
-            )
+        except AppToolError as exc:
+            # A typed failure is written for the caller, so it is safe to pass on.
+            results.append(_build_failed_document(url, str(exc)))
+        except Exception:
+            # Anything else is a bug: log it here, tell the caller only that this URL failed.
+            logger.exception("Unexpected failure fetching %s", url)
+            results.append(_build_failed_document(url, "[UNKNOWN] Could not fetch this document."))
 
     return GetInseeDocumentOutput(results=results, count=len(results))

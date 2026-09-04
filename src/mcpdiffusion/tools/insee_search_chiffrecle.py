@@ -6,7 +6,7 @@ from elasticsearch import TransportError
 from fastmcp import Context, FastMCP
 
 from ..config.tool_metadata import SEARCH_CHIFFRECLEF
-from ..core.errors import fail
+from ..core.errors import AppToolError
 from ..infra.elasticsearch import get_elasticsearch_client
 from ..models.insee import (
     SearchInseeChiffrecleInput,
@@ -56,12 +56,10 @@ def register_search_insee_chiffreclef(mcp: FastMCP, *, index: str) -> None:
                 index=index,
             )
         except (ESConnectionError, TransportError) as exc:
-            fail(
+            raise AppToolError(
                 "BACKEND_UNAVAILABLE",
                 f"INSEE documents search backend unreachable: {exc}. "
                 "Verify ES_HOST and try again.",
                 retryable=True,
             )
-            # Fixme: we saw that the fail function did already raise
-            raise
         return SearchInseeChiffrecleOutput(results=hits, count=len(hits))

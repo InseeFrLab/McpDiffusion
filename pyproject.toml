@@ -47,6 +47,15 @@ select = [
     "UP", # pyupgrade - enforces modern syntax, including `str | None` over `Optional[str]`
 ]
 
+[tool.ruff.lint.flake8-bugbear]
+# B008 forbids calls in argument defaults, because a shared mutable would leak between calls.
+# These two build a dependency marker, not a value: FastMCP resolves them per request, so the
+# default is never what the function receives.
+extend-immutable-calls = [
+    "fastmcp.dependencies.Depends",
+    "fastmcp.dependencies.CurrentContext",
+]
+
 [tool.ruff.lint.per-file-ignores]
 # Long literal statistics, pending replacement by a live source.
 "src/mcpdiffusion/data/indicators.py" = ["E501"]

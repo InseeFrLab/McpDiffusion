@@ -9,11 +9,11 @@ from fastmcp.server.middleware.logging import LoggingMiddleware
 from fastmcp.server.middleware.rate_limiting import SlidingWindowRateLimitingMiddleware
 from fastmcp.server.middleware.timing import TimingMiddleware
 
-from .config.settings import load_settings
-from .core.instructions import build_instructions
-from .core.logging import build_logging_config, configure_logging
-from .core.rate_limiting import resolve_client_host
-from .infra.lifespan import build_lifespan
+from .instructions import build_instructions
+from .lifespan import build_lifespan
+from .logging import build_logging_config, configure_logging
+from .rate_limiting import resolve_client_host
+from .settings import load_settings
 from .tools import register_tools
 
 settings = load_settings()

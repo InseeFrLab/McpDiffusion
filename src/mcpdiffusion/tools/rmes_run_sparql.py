@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from fastmcp import Context, FastMCP
 
-from ..infra.sparql import get_sparql_http_client
+from ..dependencies import get_sparql_http_client
 from ..models.rmes import (
     DEFAULT_QUERY_TIMEOUT_SECONDS,
     DEFAULT_ROW_LIMIT,

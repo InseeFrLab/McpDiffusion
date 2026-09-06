@@ -8,8 +8,8 @@ from elasticsearch import AsyncElasticsearch
 from fastmcp.server.lifespan import lifespan
 from httpx import AsyncClient, Timeout
 
-from ..services.melodi.api_service import MelodiApiService
-from ..services.melodi.index_service import MelodiIndexService
+from .services.melodi.api_service import MelodiApiService
+from .services.melodi.index_service import MelodiIndexService
 
 logger = logging.getLogger(__name__)
 

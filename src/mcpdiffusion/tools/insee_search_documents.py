@@ -6,8 +6,8 @@ from elasticsearch import ConnectionError as ESConnectionError
 from elasticsearch import TransportError
 from fastmcp import Context, FastMCP
 
-from ..core.errors import AppToolError
-from ..infra.elasticsearch import get_elasticsearch_client
+from ..dependencies import get_elasticsearch_client
+from ..errors import AppToolError
 from ..models.insee import (
     DEFAULT_RESULT_COUNT,
     DocumentSearchOutput,

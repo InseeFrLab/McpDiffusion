@@ -7,9 +7,9 @@ from elasticsearch import TransportError
 from elasticsearch.dsl import Q
 from fastmcp import Context, FastMCP
 
-from ..core.errors import AppToolError
 from ..data.themes import DICT_THEME_CONJ
-from ..infra.elasticsearch import get_elasticsearch_client
+from ..dependencies import get_elasticsearch_client
+from ..errors import AppToolError
 from ..models.insee import (
     DEFAULT_RESULT_COUNT,
     ConjonctureQuery,

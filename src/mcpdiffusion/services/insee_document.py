@@ -11,7 +11,7 @@ from bs4 import BeautifulSoup
 from trafilatura import extract
 from trafilatura.settings import Extractor
 
-from ..core.errors import AppToolError
+from ..errors import AppToolError
 from ..models.insee import (
     DocumentContentOutput,
     DocumentResult,

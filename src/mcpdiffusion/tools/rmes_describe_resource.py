@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from fastmcp import Context, FastMCP
 
-from ..infra.sparql import get_sparql_http_client
+from ..dependencies import get_sparql_http_client
 from ..models.rmes import GraphUri, ResourceOutput, ResourceUri
 from ..services.rmes import describe_rmes_resource_service
 

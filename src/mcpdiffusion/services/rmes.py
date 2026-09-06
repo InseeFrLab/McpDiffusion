@@ -13,7 +13,7 @@ from typing import Any
 
 import httpx
 
-from ..core.errors import AppToolError
+from ..errors import AppToolError
 from ..models.rmes import (
     DEFAULT_QUERY_TIMEOUT_SECONDS,
     GRAPH_BASE,

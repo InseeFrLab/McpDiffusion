@@ -16,7 +16,7 @@ from http import HTTPStatus
 
 from elasticsearch import ApiError, TransportError
 
-from ..core.errors import AppToolError
+from ..errors import AppToolError
 
 
 @asynccontextmanager

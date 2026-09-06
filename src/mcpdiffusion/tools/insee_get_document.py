@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from fastmcp import Context, FastMCP
 
-from ..infra.http import get_insee_http_client
+from ..dependencies import get_insee_http_client
 from ..models.insee import (
     DocumentContentOutput,
     DocumentUrls,

@@ -6,7 +6,7 @@ from typing import Any
 
 import httpx
 
-from ...core.errors import AppToolError
+from ...errors import AppToolError
 
 
 class MelodiApiService:

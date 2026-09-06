@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from fastmcp import FastMCP
 
-from ..config.settings import Settings
+from ..settings import Settings
 
 # Imported but never registered: send_feedback is not exposed. Decide whether to wire it up or
 # drop it, then remove this import or the noqa.

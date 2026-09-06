@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field
 
@@ -225,12 +225,19 @@ class DocumentSearchOutput(BaseModel):
 
 # --- get_insee_document ---
 
+# The entries of one category: publication title -> relative url.
+CategoryFields = dict[str, str]
+# Category name -> its entries.
+TableOfContents = dict[str, CategoryFields]
+
 
 class DocumentResult(BaseModel):
     id: str = Field(description="The input URL that produced this entry.")
-    status: str = Field(description="'success' or 'error'.")
+    status: Literal["success", "error"] = Field(
+        description="Whether this URL was fetched and parsed, or failed.",
+    )
     markdown_content: str | None = None
-    sommaire: dict[str, dict[str, str]] | None = Field(
+    sommaire: TableOfContents | None = Field(
         default=None,
         description=(
             "Parsed table of contents as "

@@ -32,6 +32,7 @@ mcp = FastMCP(
     # Only AppToolError messages reach the caller; anything else is a bug and is replaced
     # by a generic message.
     mask_error_details=True,
+    # Fixme: it takes too many arguments, we can maybe pass settings here directly
     lifespan=build_lifespan(
         es_host=settings.es_host,
         es_tls_verify=settings.es_tls_verify,
@@ -44,6 +45,7 @@ mcp = FastMCP(
         melodi_connect_timeout_seconds=settings.melodi_connect_timeout_seconds,
         melodi_datasets_index=settings.es_index_melodi_datasets,
         melodi_columns_index=settings.es_index_melodi_columns,
+        insee_publications_index=settings.es_index_publications,
     ),
 )
 

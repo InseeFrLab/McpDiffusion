@@ -8,6 +8,8 @@ from elasticsearch import AsyncElasticsearch
 from fastmcp.server.lifespan import lifespan
 from httpx import AsyncClient, Timeout
 
+from .services.insee.document_service import InseeDocumentService
+from .services.insee.index_service import InseeIndexService
 from .services.melodi.api_service import MelodiApiService
 from .services.melodi.index_service import MelodiIndexService
 
@@ -35,6 +37,7 @@ def build_lifespan(
     melodi_connect_timeout_seconds: int,
     melodi_datasets_index: str,
     melodi_columns_index: str,
+    insee_publications_index: str,
 ) -> Callable[..., Any]:
 
     @lifespan
@@ -82,6 +85,11 @@ def build_lifespan(
             columns_index=melodi_columns_index,
         )
         melodi_api_service = MelodiApiService(http_client=melodi_http_client)
+        insee_index_service = InseeIndexService(
+            elasticsearch_client=elasticsearch_client,
+            publications_index=insee_publications_index,
+        )
+        insee_document_service = InseeDocumentService(http_client=insee_http_client)
 
         try:
             yield {
@@ -91,6 +99,8 @@ def build_lifespan(
                 "sparql_http_client": sparql_http_client,
                 "melodi_index_service": melodi_index_service,
                 "melodi_api_service": melodi_api_service,
+                "insee_index_service": insee_index_service,
+                "insee_document_service": insee_document_service,
             }
         finally:
             await elasticsearch_client.close()

@@ -20,7 +20,7 @@ class Settings(BaseSettings):
 
     # Elasticsearch ----------------------------------------------------------------------------------------------------
     es_host: str
-    es_index_produits: str = "produit"
+    es_index_publications: str = "produit"
     es_index_melodi_datasets: str = "melodi_datasets"
     es_index_melodi_columns: str = "melodi_columns"
     # Elasticsearch is often internal with a self-signed certificate.

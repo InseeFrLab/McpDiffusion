@@ -5,14 +5,15 @@ parameter from the tool schema, so the LLM never sees it.
 
 Two styles coexist while the sources migrate. `Depends(...)` factories read the context
 themselves and appear as a parameter default. The older accessors take an explicit `ctx` and are
-called from inside the tool body; insee and rmes still use those.
+called from inside the tool body; rmes still uses one.
 """
 
-from elasticsearch import AsyncElasticsearch
 from fastmcp import Context
 from fastmcp.dependencies import CurrentContext
 from httpx import AsyncClient
 
+from .services.insee.document_service import InseeDocumentService
+from .services.insee.index_service import InseeIndexService
 from .services.melodi.api_service import MelodiApiService
 from .services.melodi.index_service import MelodiIndexService
 
@@ -21,8 +22,18 @@ from .services.melodi.index_service import MelodiIndexService
 
 
 # ----------------------------------------------------------------------------------------------------------------------
-# Injected dependencies ------------------------------------------------------------------------------------------------
+# Injected services ----------------------------------------------------------------------------------------------------
 # ----------------------------------------------------------------------------------------------------------------------
+
+
+def get_insee_index_service(ctx: Context = CurrentContext()) -> InseeIndexService:
+    """Return the insee.fr Elasticsearch service built at startup."""
+    return ctx.lifespan_context["insee_index_service"]
+
+
+def get_insee_document_service(ctx: Context = CurrentContext()) -> InseeDocumentService:
+    """Return the insee.fr document scraping service built at startup."""
+    return ctx.lifespan_context["insee_document_service"]
 
 
 def get_melodi_index_service(ctx: Context = CurrentContext()) -> MelodiIndexService:
@@ -38,21 +49,6 @@ def get_melodi_api_service(ctx: Context = CurrentContext()) -> MelodiApiService:
 # ----------------------------------------------------------------------------------------------------------------------
 # Client accessors, pending migration to Depends -----------------------------------------------------------------------
 # ----------------------------------------------------------------------------------------------------------------------
-
-
-def get_elasticsearch_client(ctx: Context) -> AsyncElasticsearch:
-    """Return the shared Elasticsearch client built at startup."""
-    return ctx.lifespan_context["elasticsearch_client"]
-
-
-def get_insee_http_client(ctx: Context) -> AsyncClient:
-    """Return the shared insee.fr scraping client built at startup."""
-    return ctx.lifespan_context["insee_http_client"]
-
-
-def get_melodi_http_client(ctx: Context) -> AsyncClient:
-    """Return the shared Melodi API client built at startup."""
-    return ctx.lifespan_context["melodi_http_client"]
 
 
 def get_sparql_http_client(ctx: Context) -> AsyncClient:

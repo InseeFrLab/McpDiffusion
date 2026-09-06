@@ -4,8 +4,8 @@ The only place that knows about the MCP server. A family is registered only when
 an unregistered tool is the one kind of "disabled" the protocol guarantees, unlike tag or
 visibility filtering, which a later call can undo.
 
-insee and Melodi tools are plain functions taking their service through `Depends`, so they carry
-no registration wrapper. rmes still binds its endpoint through a `register_xxx` closure.
+Every tool is a plain function that takes the service it needs through `Depends`, so none of them
+carries a registration wrapper.
 """
 
 from __future__ import annotations
@@ -25,9 +25,9 @@ from .insee.search_documents_tool import search_insee_documents
 from .melodi.get_observations_tool import get_melodi_observations
 from .melodi.search_datasets_tool import search_melodi_datasets
 from .melodi.search_modalities_tool import search_melodi_modalities
-from .rmes_describe_resource import register_describe_rmes_resource
-from .rmes_run_sparql import register_run_rmes_sparql
-from .rmes_search_graphs import register_search_rmes_graphs
+from .rmes.describe_resource_tool import describe_rmes_resource
+from .rmes.run_sparql_tool import run_rmes_sparql
+from .rmes.search_graphs_tool import search_rmes_graphs
 
 
 def register_tools(mcp: FastMCP, settings: Settings) -> None:
@@ -45,6 +45,6 @@ def register_tools(mcp: FastMCP, settings: Settings) -> None:
         mcp.add_tool(get_melodi_observations)
 
     if settings.enable_rmes_tools:
-        register_search_rmes_graphs(mcp, endpoint=settings.rmes_endpoint)
-        register_describe_rmes_resource(mcp, endpoint=settings.rmes_endpoint)
-        register_run_rmes_sparql(mcp, endpoint=settings.rmes_endpoint)
+        mcp.add_tool(search_rmes_graphs)
+        mcp.add_tool(describe_rmes_resource)
+        mcp.add_tool(run_rmes_sparql)

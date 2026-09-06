@@ -12,6 +12,7 @@ from .services.insee.document_service import InseeDocumentService
 from .services.insee.index_service import InseeIndexService
 from .services.melodi.api_service import MelodiApiService
 from .services.melodi.index_service import MelodiIndexService
+from .services.rmes.graph_store_service import RmesGraphStoreService
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +39,11 @@ def build_lifespan(
     melodi_datasets_index: str,
     melodi_columns_index: str,
     insee_publications_index: str,
+    rmes_sparql_endpoint_url: str,
+    rmes_graph_base_uri: str,
+    rmes_graph_listing_timeout_seconds: float,
+    rmes_graph_listing_max_rows: int,
+    rmes_graph_cache_ttl_seconds: float,
 ) -> Callable[..., Any]:
 
     @lifespan
@@ -90,6 +96,14 @@ def build_lifespan(
             publications_index=insee_publications_index,
         )
         insee_document_service = InseeDocumentService(http_client=insee_http_client)
+        rmes_graph_store_service = RmesGraphStoreService(
+            http_client=sparql_http_client,
+            sparql_endpoint_url=rmes_sparql_endpoint_url,
+            graph_base_uri=rmes_graph_base_uri,
+            graph_listing_timeout_seconds=rmes_graph_listing_timeout_seconds,
+            graph_listing_max_rows=rmes_graph_listing_max_rows,
+            graph_cache_ttl_seconds=rmes_graph_cache_ttl_seconds,
+        )
 
         try:
             yield {
@@ -101,6 +115,7 @@ def build_lifespan(
                 "melodi_api_service": melodi_api_service,
                 "insee_index_service": insee_index_service,
                 "insee_document_service": insee_document_service,
+                "rmes_graph_store_service": rmes_graph_store_service,
             }
         finally:
             await elasticsearch_client.close()

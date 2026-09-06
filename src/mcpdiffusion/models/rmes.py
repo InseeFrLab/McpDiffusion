@@ -7,6 +7,8 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, Field
 
+from ..data.rmes_graph_categories import CATEGORY_DEFINITIONS, FALLBACK_CATEGORY_DEFINITION
+
 # ----------------------------------------------------------------------------------------------------------------------
 # Constants ------------------------------------------------------------------------------------------------------------
 # ----------------------------------------------------------------------------------------------------------------------
@@ -17,29 +19,21 @@ MAX_QUERY_TIMEOUT_SECONDS = 60.0
 DEFAULT_ROW_LIMIT = 200
 MAX_ROW_LIMIT = 2000
 
-GRAPH_BASE = "http://rdf.insee.fr/graphes/"
-
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Enumerations ---------------------------------------------------------------------------------------------------------
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-class GraphCategoryChoice(StrEnum):
-    ALL = "ALL"
-    QUALITE_RAPPORTS = "qualite_rapports"
-    QUALITE_REFERENTIELS = "qualite_referentiels"
-    CODES_CONCEPTS_GENERIQUES = "codes_concepts_generiques"
-    NOMENCLATURES = "nomenclatures"
-    OPERATIONS_STATISTIQUES = "operations_statistiques"
-    DEMOGRAPHIE = "demographie"
-    GEOGRAPHIE = "geographie"
-    ORGANISATIONS = "organisations"
-    CONCEPTS = "concepts"
-    PRODUITS = "produits"
-    CATALOGUE = "catalogue"
-    ONTOLOGIES = "ontologies"
-    AUTRE = "autre"
+# Derived from the rule table so a new family cannot be added without becoming selectable.
+# "ALL" is not a family: it means "do not filter".
+GraphCategoryChoice = StrEnum(
+    "GraphCategoryChoice",
+    {
+        "ALL": "ALL",
+        **{entry["key"].upper(): entry["key"] for entry in [*CATEGORY_DEFINITIONS, FALLBACK_CATEGORY_DEFINITION]},
+    },
+)
 
 
 # ----------------------------------------------------------------------------------------------------------------------

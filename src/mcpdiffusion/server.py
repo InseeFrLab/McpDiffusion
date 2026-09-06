@@ -46,6 +46,11 @@ mcp = FastMCP(
         melodi_datasets_index=settings.es_index_melodi_datasets,
         melodi_columns_index=settings.es_index_melodi_columns,
         insee_publications_index=settings.es_index_publications,
+        rmes_sparql_endpoint_url=settings.rmes_sparql_endpoint_url,
+        rmes_graph_base_uri=settings.rmes_graph_base_uri,
+        rmes_graph_listing_timeout_seconds=settings.rmes_graph_listing_timeout_seconds,
+        rmes_graph_listing_max_rows=settings.rmes_graph_listing_max_rows,
+        rmes_graph_cache_ttl_seconds=settings.rmes_graph_cache_ttl_seconds,
     ),
 )
 

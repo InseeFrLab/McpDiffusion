@@ -3,19 +3,18 @@
 A tool declares what it needs in its signature; FastMCP resolves it per request and hides the
 parameter from the tool schema, so the LLM never sees it.
 
-Two styles coexist while the sources migrate. `Depends(...)` factories read the context
-themselves and appear as a parameter default. The older accessors take an explicit `ctx` and are
-called from inside the tool body; rmes still uses one.
+Every tool takes its service through `Depends(...)`, which reads the context itself and appears
+as a parameter default.
 """
 
 from fastmcp import Context
 from fastmcp.dependencies import CurrentContext
-from httpx import AsyncClient
 
 from .services.insee.document_service import InseeDocumentService
 from .services.insee.index_service import InseeIndexService
 from .services.melodi.api_service import MelodiApiService
 from .services.melodi.index_service import MelodiIndexService
+from .services.rmes.graph_store_service import RmesGraphStoreService
 
 # Fixme: these dependency functions do not provide proper typing which is a pity -- the lifespan
 #   context is an untyped mapping, so every return annotation below is asserted, never checked.
@@ -46,11 +45,6 @@ def get_melodi_api_service(ctx: Context = CurrentContext()) -> MelodiApiService:
     return ctx.lifespan_context["melodi_api_service"]
 
 
-# ----------------------------------------------------------------------------------------------------------------------
-# Client accessors, pending migration to Depends -----------------------------------------------------------------------
-# ----------------------------------------------------------------------------------------------------------------------
-
-
-def get_sparql_http_client(ctx: Context) -> AsyncClient:
-    """Return the shared SPARQL client built at startup."""
-    return ctx.lifespan_context["sparql_http_client"]
+def get_rmes_graph_store_service(ctx: Context = CurrentContext()) -> RmesGraphStoreService:
+    """Return the RMES graph store service built at startup."""
+    return ctx.lifespan_context["rmes_graph_store_service"]

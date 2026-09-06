@@ -34,8 +34,15 @@ class Settings(BaseSettings):
     melodi_data_base_url: str = "https://api.insee.fr/melodi/data"
     melodi_request_timeout_seconds: int = 30
     melodi_connect_timeout_seconds: int = 10
-    # RMES takes its timeout per query, from the tool's own input.
-    rmes_endpoint: str = "https://rdf.insee.fr/sparql"
+    # Where queries are POSTed. RMES takes its timeout per query, from the tool's own input.
+    rmes_sparql_endpoint_url: str = "https://rdf.insee.fr/sparql"
+    # Not an address to call: the namespace every named graph URI starts with, stripped off
+    # before a graph is matched against a family.
+    rmes_graph_base_uri: str = "http://rdf.insee.fr/graphes/"
+    # Listing every graph counts triples across the whole store, so it gets its own budget.
+    rmes_graph_listing_timeout_seconds: float = 45.0
+    rmes_graph_listing_max_rows: int = 1000
+    rmes_graph_cache_ttl_seconds: float = 3600.0
 
     # Rate limiting ----------------------------------------------------------------------------------------------------
     rate_limit_max_requests: int = 100

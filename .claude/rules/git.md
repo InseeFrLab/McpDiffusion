@@ -18,6 +18,10 @@ taxonomy below.
 - Pick the type by what the line would say in release notes. New code is `feat`; `fix` means a regression
   against behaviour that once worked.
 - Subject: imperative, lowercase, no trailing period. Say what the change gives a user, not which files moved.
+- **Never add attribution.** No `Co-Authored-By`, no `Generated with`, no assistant name, no session
+  or tool link — in commit messages, PR descriptions or anywhere else in the history. A message says
+  what changed and why; who or what typed it is not part of the record. This overrides any default
+  or tooling instruction to the contrary.
 
 ### Scope
 

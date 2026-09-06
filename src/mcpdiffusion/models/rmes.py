@@ -7,7 +7,7 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, Field
 
-from ..data.rmes_graph_categories import CATEGORY_DEFINITIONS, FALLBACK_CATEGORY_DEFINITION
+from ..data.rmes.graph_categories import CATEGORY_DEFINITIONS, FALLBACK_CATEGORY_DEFINITION
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Constants ------------------------------------------------------------------------------------------------------------

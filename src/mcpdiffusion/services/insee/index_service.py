@@ -18,8 +18,8 @@ from elasticsearch.dsl import AsyncSearch, Q
 from elasticsearch.dsl.query import Query
 from elasticsearch.dsl.response import Response
 
-from ...data.geography import DICT_GEO
-from ...data.themes import DICT_THEME_CONJ, KEYS_THEME_NIV1
+from ...data.insee.geography import DICT_GEO
+from ...data.insee.themes import DICT_THEME_CONJ, KEYS_THEME_NIV1
 from ...models.insee import DocumentHit
 from ..elasticsearch_failures import elasticsearch_failures_as_tool_errors
 

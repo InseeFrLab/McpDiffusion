@@ -1,4 +1,4 @@
-"""Sorting RMES graphs into the families declared in `data/rmes_graph_categories.py`.
+"""Sorting RMES graphs into the families declared in `data/rmes/graph_categories.py`.
 
 Pure: no client, no I/O, and no state worth a class -- the graph base is passed in rather than
 read from a module global, so these functions work against any store.
@@ -11,7 +11,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from ...data.rmes_graph_categories import CATEGORY_DEFINITIONS, FALLBACK_CATEGORY_DEFINITION
+from ...data.rmes.graph_categories import CATEGORY_DEFINITIONS, FALLBACK_CATEGORY_DEFINITION
 from ...models.rmes import CategoryBucket, GraphRow
 
 MAX_EXAMPLES_PER_CATEGORY = 5

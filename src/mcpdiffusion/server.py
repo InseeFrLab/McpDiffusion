@@ -42,6 +42,8 @@ mcp = FastMCP(
         melodi_data_base_url=settings.melodi_data_base_url,
         melodi_request_timeout_seconds=settings.melodi_request_timeout_seconds,
         melodi_connect_timeout_seconds=settings.melodi_connect_timeout_seconds,
+        melodi_datasets_index=settings.es_index_melodi_datasets,
+        melodi_columns_index=settings.es_index_melodi_columns,
     ),
 )
 

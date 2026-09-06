@@ -1,8 +1,11 @@
 """Tool registration entrypoint.
 
-Each tool module exposes a `register_xxx(mcp: FastMCP)` function. This file
-wires all of them in one place; to disable a tool, comment out its import
-and the corresponding call below.
+The only place that knows about the MCP server. A family is registered only when its flag is on:
+an unregistered tool is the one kind of "disabled" the protocol guarantees, unlike tag or
+visibility filtering, which a later call can undo.
+
+Melodi tools are plain functions taking their service through `Depends`, so they carry no
+registration wrapper. The other families still bind settings through a `register_xxx` closure.
 """
 
 from __future__ import annotations
@@ -19,15 +22,14 @@ from .insee_get_homepage import register_get_insee_homepage
 from .insee_search_chiffrecle import register_search_insee_chiffrecle
 from .insee_search_conjoncture import register_search_insee_conjoncture
 from .insee_search_documents import register_search_insee_documents
-from .melodi_get_observations import register_get_melodi_observations
-from .melodi_search_datasets import register_search_melodi_datasets
-from .melodi_search_modalities import register_search_melodi_modalities
+from .melodi.get_observations_tool import get_melodi_observations
+from .melodi.search_datasets_tool import search_melodi_datasets
+from .melodi.search_modalities_tool import search_melodi_modalities
 from .rmes_describe_resource import register_describe_rmes_resource
 from .rmes_run_sparql import register_run_rmes_sparql
 from .rmes_search_graphs import register_search_rmes_graphs
 
 
-# Fixme: there might be better pattern instead of iterating with if statements on tool groups
 def register_tools(mcp: FastMCP, settings: Settings) -> None:
     """Register the enabled tools, handing each the settings it needs."""
     if settings.enable_inseefr_tools:
@@ -38,9 +40,9 @@ def register_tools(mcp: FastMCP, settings: Settings) -> None:
         register_search_insee_chiffrecle(mcp, index=settings.es_index_produits)
 
     if settings.enable_melodi_tools:
-        register_search_melodi_datasets(mcp, index=settings.es_index_melodi_datasets)
-        register_search_melodi_modalities(mcp, index=settings.es_index_melodi_columns)
-        register_get_melodi_observations(mcp)
+        mcp.add_tool(search_melodi_datasets)
+        mcp.add_tool(search_melodi_modalities)
+        mcp.add_tool(get_melodi_observations)
 
     if settings.enable_rmes_tools:
         register_search_rmes_graphs(mcp, endpoint=settings.rmes_endpoint)

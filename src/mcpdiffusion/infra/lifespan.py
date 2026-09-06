@@ -8,6 +8,9 @@ from elasticsearch import AsyncElasticsearch
 from fastmcp.server.lifespan import lifespan
 from httpx import AsyncClient, Timeout
 
+from ..services.melodi.api_service import MelodiApiService
+from ..services.melodi.index_service import MelodiIndexService
+
 logger = logging.getLogger(__name__)
 
 # insee.fr serves different markup to unknown agents, so the scraper has to look like a browser.
@@ -30,6 +33,8 @@ def build_lifespan(
     melodi_data_base_url: str,
     melodi_request_timeout_seconds: int,
     melodi_connect_timeout_seconds: int,
+    melodi_datasets_index: str,
+    melodi_columns_index: str,
 ) -> Callable[..., Any]:
 
     @lifespan
@@ -69,12 +74,23 @@ def build_lifespan(
         )
         logger.info("SPARQL client initialized")
 
+        # Services bind a client to its index or base URL once, so nothing downstream has to
+        # carry an index name around. They hold no request state, so one instance serves every call.
+        melodi_index_service = MelodiIndexService(
+            elasticsearch_client=elasticsearch_client,
+            datasets_index=melodi_datasets_index,
+            columns_index=melodi_columns_index,
+        )
+        melodi_api_service = MelodiApiService(http_client=melodi_http_client)
+
         try:
             yield {
                 "elasticsearch_client": elasticsearch_client,
                 "insee_http_client": insee_http_client,
                 "melodi_http_client": melodi_http_client,
                 "sparql_http_client": sparql_http_client,
+                "melodi_index_service": melodi_index_service,
+                "melodi_api_service": melodi_api_service,
             }
         finally:
             await elasticsearch_client.close()

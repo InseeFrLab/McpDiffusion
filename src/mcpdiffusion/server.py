@@ -32,26 +32,7 @@ mcp = FastMCP(
     # Only AppToolError messages reach the caller; anything else is a bug and is replaced
     # by a generic message.
     mask_error_details=True,
-    # Fixme: it takes too many arguments, we can maybe pass settings here directly
-    lifespan=build_lifespan(
-        es_host=settings.es_host,
-        es_tls_verify=settings.es_tls_verify,
-        es_request_timeout_seconds=settings.es_request_timeout_seconds,
-        insee_base_url=settings.insee_base_url,
-        insee_request_timeout_seconds=settings.insee_request_timeout_seconds,
-        insee_connect_timeout_seconds=settings.insee_connect_timeout_seconds,
-        melodi_data_base_url=settings.melodi_data_base_url,
-        melodi_request_timeout_seconds=settings.melodi_request_timeout_seconds,
-        melodi_connect_timeout_seconds=settings.melodi_connect_timeout_seconds,
-        melodi_datasets_index=settings.es_index_melodi_datasets,
-        melodi_columns_index=settings.es_index_melodi_columns,
-        insee_publications_index=settings.es_index_publications,
-        rmes_sparql_endpoint_url=settings.rmes_sparql_endpoint_url,
-        rmes_graph_base_uri=settings.rmes_graph_base_uri,
-        rmes_graph_listing_timeout_seconds=settings.rmes_graph_listing_timeout_seconds,
-        rmes_graph_listing_max_rows=settings.rmes_graph_listing_max_rows,
-        rmes_graph_cache_ttl_seconds=settings.rmes_graph_cache_ttl_seconds,
-    ),
+    lifespan=build_lifespan(settings),
 )
 
 register_tools(mcp, settings)

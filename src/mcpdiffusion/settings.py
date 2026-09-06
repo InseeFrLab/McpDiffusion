@@ -1,5 +1,6 @@
 """Every value this server can be configured with."""
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -19,7 +20,9 @@ class Settings(BaseSettings):
     enable_rmes_tools: bool = True
 
     # Elasticsearch ----------------------------------------------------------------------------------------------------
-    es_host: str
+    # Only the insee.fr and Melodi tools search Elasticsearch; rmes runs without it, so the
+    # host is genuinely absent rather than empty when they are disabled.
+    es_host: str | None = None
     es_index_publications: str = "produit"
     es_index_melodi_datasets: str = "melodi_datasets"
     es_index_melodi_columns: str = "melodi_columns"
@@ -50,6 +53,17 @@ class Settings(BaseSettings):
 
     # Logging ----------------------------------------------------------------------------------------------------------
     log_level: str = "INFO"
+
+    @model_validator(mode="after")
+    def require_elasticsearch_when_it_is_searched(self) -> "Settings":
+        """Fail at startup rather than on the first search that needs a host."""
+        if self.es_host is None and (self.enable_inseefr_tools or self.enable_melodi_tools):
+            raise ValueError(
+                "ES_HOST is required because the insee.fr or Melodi tools are enabled. "
+                "Set it, or disable those families with ENABLE_INSEEFR_TOOLS=false and "
+                "ENABLE_MELODI_TOOLS=false."
+            )
+        return self
 
     model_config = SettingsConfigDict(
         env_file=".env",

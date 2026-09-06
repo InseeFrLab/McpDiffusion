@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from fastmcp.dependencies import Depends
 
-from ...dependencies import get_melodi_index_service
+from ...dependencies.melodi import get_melodi_index_service
 from ...models.melodi import (
     DatasetQuery,
     DatasetsOutput,

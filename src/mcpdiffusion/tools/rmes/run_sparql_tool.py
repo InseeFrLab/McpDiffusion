@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from fastmcp.dependencies import Depends
 
-from ...dependencies import get_rmes_graph_store_service
+from ...dependencies.rmes import get_rmes_graph_store_service
 from ...errors import AppToolError
 from ...models.rmes import (
     DEFAULT_QUERY_TIMEOUT_SECONDS,

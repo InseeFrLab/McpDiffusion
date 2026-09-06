@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from fastmcp.dependencies import Depends
 
-from ...dependencies import get_insee_document_service
+from ...dependencies.insee import get_insee_document_service
 from ...models.insee import (
     DocumentContentOutput,
     DocumentUrls,

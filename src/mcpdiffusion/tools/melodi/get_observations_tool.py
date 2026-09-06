@@ -6,7 +6,7 @@ from typing import Any
 
 from fastmcp.dependencies import Depends
 
-from ...dependencies import get_melodi_api_service
+from ...dependencies.melodi import get_melodi_api_service
 from ...models.melodi import (
     ColumnFilters,
     DatasetId,

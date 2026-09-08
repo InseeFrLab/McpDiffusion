@@ -195,8 +195,7 @@ class InseeDocumentService:
             )
 
         results: list[DocumentResult] = []
-        # Fixme: there should be a cap in the number of URLs provided to avoid overloading the server
-        # Fixme: on top of that, the fetching is done sequentially, impacting the event loop
+        # Fixme: the URLs are fetched one after another, so the call takes the sum of their times
         for url in document_urls:
             try:
                 html = await self.fetch_html(url)

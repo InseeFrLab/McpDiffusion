@@ -24,6 +24,8 @@ GLOBAL_RULES = """
       discovery call first.
     - The data is French. Search with French keywords and rich synonyms.
     - An empty result is a valid answer, not a failure. It usually means the filters were too narrow.
+    - A routing hint may name a tool from another source. Only the tools in your tool list exist here; if a hint
+      names one you do not have, ignore it and use what you have.
 """
 
 # language=Markdown
@@ -44,8 +46,8 @@ INSEE_SECTION = """
     - Cas simples : 'Quelle est la population de X ?', 'Taux de chomage en 2024 ?', 'Inflation en juillet 2026 ?'
 
     WHEN NOT TO USE
-    - Analyses detaillees, impacts/contexte, tendances complexes, donnees produit granulaires historiques
-      -> `search_melodi_datasets` ou `search_insee_documents` selon le contexte.
+    - Analyses detaillees, impacts/contexte, tendances complexes -> `search_insee_documents`.
+    - Donnees produit granulaires historiques -> `search_melodi_datasets`.
 
     ### `search_insee_documents`
 

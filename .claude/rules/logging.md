@@ -28,12 +28,20 @@ Never send the same message to both.
   `logger` with a redacting filter is in place.
 - Register logging middleware last, so it records execution after the rest of the chain has run.
 
+## Deliberate exception: feedback
+
+`send_feedback` records a client's report at `info` on the server log. That is a widening of the
+channel -- it is not an incident, and nobody is on call for it -- and it is the point: a file inside
+the container is lost on the next restart, while the log already reaches the operators. Client text
+is JSON-encoded into the message so an embedded newline cannot forge a second log line.
+
 ## Who logs what
 
 - **Middleware logs failures, not services.** `ErrorHandlingMiddleware` already catches, logs and converts
   every exception. Code that logs before raising records the same failure twice.
 - A service logs only what the exception cannot carry, and never at `error` level.
-- Never log credentials, tokens or request bodies.
+- Never log credentials, tokens or request bodies. The single exception is `send_feedback`, whose
+  body is the record itself -- see "Deliberate exception" above.
 
 ## Configuration
 

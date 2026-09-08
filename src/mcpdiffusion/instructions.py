@@ -169,12 +169,28 @@ RMES_SECTION = """
 """
 
 
+FEEDBACK_SECTION = """
+    ## FEEDBACK
+
+    ### `send_feedback`
+
+    WHEN TO USE
+    - A tool failed, returned an empty result you have good reason to think is wrong, or its description led you to
+      the wrong call. Say which tool and what you expected.
+
+    WHEN NOT TO USE
+    - To answer the person you are talking to. It reaches the server maintainers, not them.
+    - To keep notes for yourself, or to acknowledge a call that worked.
+"""
+
+
 def build_instructions(
     enable_inseefr_tools: bool,
     enable_melodi_tools: bool,
     enable_rmes_tools: bool,
+    enable_feedback_tool: bool,
 ) -> str:
-    """Assemble the guidance for the tool families this deployment actually registers."""
+    """Assemble the guidance for the tools this deployment actually registers."""
     sections = [OVERVIEW, GLOBAL_RULES]
     if enable_inseefr_tools:
         sections.append(INSEE_SECTION)
@@ -182,4 +198,6 @@ def build_instructions(
         sections.append(MELODI_SECTION)
     if enable_rmes_tools:
         sections.append(RMES_SECTION)
+    if enable_feedback_tool:
+        sections.append(FEEDBACK_SECTION)
     return "\n\n".join(dedent(section).strip() for section in sections)

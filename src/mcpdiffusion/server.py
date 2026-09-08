@@ -28,6 +28,7 @@ mcp = FastMCP(
         enable_inseefr_tools=settings.enable_inseefr_tools,
         enable_melodi_tools=settings.enable_melodi_tools,
         enable_rmes_tools=settings.enable_rmes_tools,
+        enable_feedback_tool=settings.enable_feedback_tool,
     ),
     # Only AppToolError messages reach the caller; anything else is a bug and is replaced
     # by a generic message.

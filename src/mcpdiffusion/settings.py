@@ -22,6 +22,8 @@ class Settings(BaseSettings):
     enable_inseefr_tools: bool = True
     enable_melodi_tools: bool = True
     enable_rmes_tools: bool = True
+    # Reporting only: it records to the server log and needs no backend.
+    enable_feedback_tool: bool = True
 
     # Elasticsearch ----------------------------------------------------------------------------------------------------
     # Only the insee.fr and Melodi tools search Elasticsearch; rmes runs without it, so the

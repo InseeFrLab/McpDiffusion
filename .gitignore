@@ -6,3 +6,7 @@ mcp_*
 .idea
 .claude/settings.local.json
 TODO.md
+
+# User-submitted feedback. Kept on disk, never versioned -- the tool now records to the
+# server log, so nothing writes here any more.
+src/mcpdiffusion/feedback/

@@ -108,8 +108,9 @@ def build_resource_query(resource_uri: str, graph_uri: str | None) -> str:
     """Ask for every triple where the resource appears, in either direction."""
     graph_clause = f"<{graph_uri}>" if graph_uri else "?g"
     graph_values = f"VALUES ?g {{ <{graph_uri}> }}" if graph_uri else ""
-    # Fixme: the query is built using string interpolation
-    #   just check whether injection can cause problems here
+    # Interpolated, not parameterised: SPARQL has no bind parameters for IRIs. Safe because both
+    # URIs are `pattern`-checked in models/rmes.py against the IRI grammar, so neither can carry
+    # the `>` that would close the brackets and let the rest run as query text.
     return f"""
     SELECT ?g ?direction ?p ?o WHERE {{
       {graph_values}

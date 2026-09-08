@@ -79,10 +79,17 @@ ExpandGraphs = Annotated[
 
 # --- describe_rmes_resource ---
 
+# Both URIs below are interpolated into `<...>` in a SPARQL query. The SPARQL grammar already
+# forbids these characters inside an IRI, so rejecting them costs no legitimate value and stops a
+# crafted URI from closing the brackets and continuing the query. The caller gets a schema error
+# naming the parameter instead of a syntax error from RMES.
+IRI_PATTERN = r'^[^<>"{}|^`\\\x00-\x20]+$'
+
 ResourceUri = Annotated[
     str,
     Field(
         description="URI complete de la ressource RDF a decrire.",
+        pattern=IRI_PATTERN,
         examples=[
             "http://id.insee.fr/codes/naf2025/section/A",
         ],
@@ -96,6 +103,7 @@ GraphUri = Annotated[
             "URI d'un graphe nomme pour restreindre la recherche. Sans cette valeur (None par defaut), "
             "la recherche se fait sur tous les graphes (plus lent)."
         ),
+        pattern=IRI_PATTERN,
     ),
 ]
 

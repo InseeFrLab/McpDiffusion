@@ -6,9 +6,6 @@ from fastmcp.dependencies import CurrentContext
 from ..services.insee.document_service import InseeDocumentService
 from ..services.insee.index_service import InseeIndexService
 
-# Fixme: these dependency functions do not provide proper typing which is a pity -- the lifespan
-#   context is an untyped mapping, so every return annotation below is asserted, never checked.
-
 
 def get_insee_index_service(ctx: Context = CurrentContext()) -> InseeIndexService:
     """Return the insee.fr Elasticsearch service built at startup."""

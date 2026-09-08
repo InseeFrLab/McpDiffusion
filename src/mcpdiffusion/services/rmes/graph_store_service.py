@@ -32,7 +32,10 @@ GRAPH_LISTING_QUERY = (
 
 STRIP_PREFIX_PATTERN = re.compile(r"(?i)^\s*(PREFIX|BASE)\b.*$", re.MULTILINE)
 QUERY_FORM_PATTERN = re.compile(r"(?i)\b(SELECT|ASK|CONSTRUCT|DESCRIBE)\b")
-LIMIT_PATTERN = re.compile(r"(?i)\bLIMIT\s+\d+\b")
+# A LIMIT that bounds the whole query is the last thing in it -- OFFSET may follow or precede it,
+# but nothing else does. Matching LIMIT anywhere counted one belonging to a subquery, or the word
+# sitting in a string literal, and left the outer query unbounded.
+TRAILING_LIMIT_PATTERN = re.compile(r"(?i)\bLIMIT\s+\d+\b(?:\s+OFFSET\s+\d+)?\s*;?\s*$")
 
 JSON_RESULT_FORMS = ("SELECT", "ASK")
 LIMITABLE_FORMS = ("SELECT", "CONSTRUCT")
@@ -66,9 +69,7 @@ def ensure_row_limit(query: str, query_form: str, max_rows: int) -> tuple[str, b
     """Append a LIMIT when the caller supplied none, so an open query cannot flood the response."""
     if query_form not in LIMITABLE_FORMS:
         return query, False
-    # Fixme: this is a particular case, but if there is inner queries with the word limit,
-    #  nothing prevents outer queries from not being bound
-    if LIMIT_PATTERN.search(query):
+    if TRAILING_LIMIT_PATTERN.search(query.rstrip()):
         return query, False
     return query.rstrip().rstrip(";") + f"\nLIMIT {max_rows}", True
 

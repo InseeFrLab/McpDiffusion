@@ -17,6 +17,23 @@ from ...models.melodi import (
 from ...services.melodi.api_service import MelodiApiService
 
 
+def read_observation_year(observation: dict[str, Any]) -> str:
+    """The year an observation covers, taken from the head of its TIME_PERIOD ("2023-01" -> "2023").
+
+    Returns "" when the observation carries no period at all, so a year filter drops it rather than
+    failing the whole call.
+    """
+    dimensions = observation.get("dimensions") or {}
+    time_period = dimensions.get("TIME_PERIOD")
+    if time_period is None:
+        return ""
+    # Fixme: TIME_PERIOD is assumed to be a string. Every dataset checked returns one, but we do not
+    #   control the format and have not seen them all, so a non-string raises here. Coercing with
+    #   str() was considered and rejected: it would match nothing silently, turning a surprise in the
+    #   upstream format into a wrong answer instead of a visible failure.
+    return time_period.split("-")[0]
+
+
 def keep_requested_years(
     observations: list[dict[str, Any]],
     years: list[int],
@@ -28,12 +45,7 @@ def keep_requested_years(
     if not years:
         return observations
     requested_years = {str(year) for year in years}
-    return [
-        observation
-        for observation in observations
-        # Fixme: 'TIME_PERIOD' could be sanitized
-        if (observation.get("dimensions", {}).get("TIME_PERIOD", "").split("-")[0]) in requested_years
-    ]
+    return [observation for observation in observations if read_observation_year(observation) in requested_years]
 
 
 async def get_melodi_observations(

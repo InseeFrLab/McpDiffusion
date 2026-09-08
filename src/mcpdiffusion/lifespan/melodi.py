@@ -15,8 +15,8 @@ from ..services.melodi.index_service import MelodiIndexService
 
 logger = logging.getLogger(__name__)
 
-# The API has no browser requirement, so it gets an honest identity.
-USER_AGENT = "McpDiffusion/0.1"
+# Honest identity -- these APIs need no browser spoofing. Hardcoded: bump with pyproject.toml maybe.
+USER_AGENT = "McpDiffusion/0.1.0"
 
 
 @asynccontextmanager

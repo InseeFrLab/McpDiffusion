@@ -13,7 +13,8 @@ from ..services.rmes.graph_store_service import RmesGraphStoreService
 
 logger = logging.getLogger(__name__)
 
-USER_AGENT = "MCP-RMeS/2.0"
+# Honest identity -- these APIs need no browser spoofing. Hardcoded: bump with pyproject.toml maybe.
+USER_AGENT = "McpDiffusion/0.1.0"
 
 
 @asynccontextmanager

@@ -38,7 +38,6 @@ class AppToolError(ToolError):
         self,
         code: ErrorCode,
         message: str,
-        *,
         retryable: bool = False,
     ) -> None:
         self.code = code

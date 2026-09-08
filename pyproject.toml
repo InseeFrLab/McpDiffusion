@@ -45,6 +45,9 @@ select = [
     "I", # isort
     "B", # flake8-bugbear - catches common bug patterns
     "UP", # pyupgrade - enforces modern syntax, including `str | None` over `Optional[str]`
+    # Only the call-site rule of flake8-boolean-trap: a bare `True` in a call reads as nothing.
+    # FBT001/FBT002 are left off because a tool's boolean parameter is a named field of its schema.
+    "FBT003", # flake8-boolean-trap
 ]
 
 [tool.ruff.lint.flake8-bugbear]

@@ -170,7 +170,6 @@ RMES_SECTION = """
 
 
 def build_instructions(
-    *,
     enable_inseefr_tools: bool,
     enable_melodi_tools: bool,
     enable_rmes_tools: bool,

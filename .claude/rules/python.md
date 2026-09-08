@@ -8,8 +8,9 @@ Default to pure: same arguments in, same value out.
 - Never read a global inside a function — no `get_settings()`, no module-level client or cache.
 - Never mutate an argument. Return a new value.
 - No I/O and no clock reads at import time.
-- Take what you need as a parameter, keyword-only unless it is the subject of the call. Pass specific
-  values, never a whole configuration object.
+- Take what you need as a parameter. Pass specific values, never a whole configuration object.
+- No bare `*` in a signature. Call sites name their arguments (see Layout), so forcing it in every
+  declaration only adds noise; `FBT003` catches the positional boolean that actually misreads.
 
 ## Typing and syntax
 

@@ -32,7 +32,6 @@ def _ensure_feedback_file() -> Path:
 # Fixme: Also wondering if there is a cap on the author size of the feedback content,
 #  it can make the container write uncontrolled amount of data
 async def send_feedback_service(
-    *,
     author: str,
     feedback: str,
 ) -> FeedbackOutput:

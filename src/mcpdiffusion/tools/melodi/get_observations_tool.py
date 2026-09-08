@@ -27,10 +27,7 @@ def read_observation_year(observation: dict[str, Any]) -> str:
     time_period = dimensions.get("TIME_PERIOD")
     if time_period is None:
         return ""
-    # Fixme: TIME_PERIOD is assumed to be a string. Every dataset checked returns one, but we do not
-    #   control the format and have not seen them all, so a non-string raises here. Coercing with
-    #   str() was considered and rejected: it would match nothing silently, turning a surprise in the
-    #   upstream format into a wrong answer instead of a visible failure.
+    # Deliberately not coerced with str(): a non-string should raise, not quietly match nothing.
     return time_period.split("-")[0]
 
 
@@ -62,8 +59,10 @@ async def get_melodi_observations(
     list means no rows matched; a structured error means the upstream API failed or the inputs
     were invalid.
     """
-    # Fixme: it seems we retrieve all the observations data and filter next
-    #   I wonder whether the API supports filtering
+    # Business rule: fetching everything and filtering years here is deliberate. The API's own
+    #   filter matches only periods starting on that date, so `TIME_PERIOD=2025` returns the
+    #   yearly row and January but not August. Filtering upstream would silently drop most of a
+    #   monthly dataset. Verified on DS_DECES_MORTALITE_SERIES, which holds both.
     observations = await melodi_api_service.fetch_observations(
         dataset_id=dataset_id,
         column_filters=column_filters,

@@ -26,6 +26,7 @@ async def insee_lifespan(
     request_timeout_seconds: int,
     connect_timeout_seconds: int,
     publications_index: str,
+    document_max_markdown_chars: int,
 ) -> AsyncIterator[dict[str, Any]]:
     """Build the insee.fr services and close the scraping client on shutdown."""
     http_client = AsyncClient(
@@ -43,7 +44,10 @@ async def insee_lifespan(
                 elasticsearch_client=elasticsearch_client,
                 publications_index=publications_index,
             ),
-            "insee_document_service": InseeDocumentService(http_client=http_client),
+            "insee_document_service": InseeDocumentService(
+                http_client=http_client,
+                max_markdown_chars=document_max_markdown_chars,
+            ),
         }
     finally:
         await http_client.aclose()

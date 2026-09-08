@@ -20,12 +20,11 @@ TRAFILATURA_OPTIONS = Extractor(
     output_format="markdown",
     links=True,
     formatting=True,
-    # Fixme: this URL might belong in the settings
+    # A metadata label, not an address to call: trafilatura records it, but our markdown comes out
+    # byte-identical whatever it is set to.
     source="insee.fr",
     with_metadata=True,
 )
-
-MAX_MARKDOWN_CHARS = 30_000
 
 TRUNCATION_MARKER = """
 
@@ -110,7 +109,7 @@ def group_table_of_contents(entries: TableOfContentsEntries) -> TableOfContents:
     return dict(by_category)
 
 
-def truncate_markdown(text: str, limit: int = MAX_MARKDOWN_CHARS) -> tuple[str, bool]:
+def truncate_markdown(text: str, limit: int) -> tuple[str, bool]:
     """Keep the head and tail of an over-long document, marking where the middle was dropped."""
     if len(text) <= limit:
         return text, False
@@ -142,8 +141,13 @@ def build_failed_document(url: str, message: str) -> DocumentResult:
 class InseeDocumentService:
     """Fetches insee.fr publication pages and renders them as markdown."""
 
-    def __init__(self, http_client: httpx.AsyncClient) -> None:
+    def __init__(
+        self,
+        http_client: httpx.AsyncClient,
+        max_markdown_chars: int,
+    ) -> None:
         self._http_client = http_client
+        self._max_markdown_chars = max_markdown_chars
 
     async def fetch_html(self, url: str) -> str:
         """Return the raw HTML of one publication page."""
@@ -197,7 +201,11 @@ class InseeDocumentService:
             try:
                 html = await self.fetch_html(url)
                 markdown = extract(html, options=TRAFILATURA_OPTIONS) or ""
-                markdown, truncated = truncate_markdown(markdown) if truncate_content else (markdown, False)
+                markdown, truncated = (
+                    truncate_markdown(markdown, limit=self._max_markdown_chars)
+                    if truncate_content
+                    else (markdown, False)
+                )
 
                 table_of_contents: TableOfContents | None = None
                 if include_table_of_contents:

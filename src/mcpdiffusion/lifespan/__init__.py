@@ -42,6 +42,7 @@ def build_lifespan(settings: Settings) -> Lifespan:
                         host=es_host,
                         tls_verify=settings.es_tls_verify,
                         request_timeout_seconds=settings.es_request_timeout_seconds,
+                        max_retries=settings.es_max_retries,
                     )
                 )
 
@@ -53,6 +54,7 @@ def build_lifespan(settings: Settings) -> Lifespan:
                             request_timeout_seconds=settings.insee_request_timeout_seconds,
                             connect_timeout_seconds=settings.insee_connect_timeout_seconds,
                             publications_index=settings.es_index_publications,
+                            document_max_markdown_chars=settings.insee_document_max_markdown_chars,
                         )
                     )
 

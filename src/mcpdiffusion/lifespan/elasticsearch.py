@@ -10,14 +10,13 @@ from elasticsearch import AsyncElasticsearch
 
 logger = logging.getLogger(__name__)
 
-MAX_RETRIES = 2
-
 
 @asynccontextmanager
 async def elasticsearch_lifespan(
     host: str,
     tls_verify: bool,
     request_timeout_seconds: int,
+    max_retries: int,
 ) -> AsyncIterator[AsyncElasticsearch]:
     """Open the shared client and close it on shutdown.
 
@@ -27,7 +26,7 @@ async def elasticsearch_lifespan(
         host,
         verify_certs=tls_verify,
         request_timeout=request_timeout_seconds,
-        max_retries=MAX_RETRIES,
+        max_retries=max_retries,
         retry_on_timeout=True,
     )
     logger.info("Elasticsearch client initialized for %s", host)

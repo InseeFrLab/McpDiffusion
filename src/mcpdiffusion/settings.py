@@ -33,11 +33,17 @@ class Settings(BaseSettings):
     # Elasticsearch is often internal with a self-signed certificate.
     es_tls_verify: bool = True
     es_request_timeout_seconds: int = 30
+    # Retries the client makes itself before a search fails. Raising it hides brief outages;
+    # lowering it surfaces them sooner.
+    es_max_retries: int = 2
 
     # INSEE services ---------------------------------------------------------------------------------------------------
     insee_base_url: str = "https://www.insee.fr"
     insee_request_timeout_seconds: int = 30
     insee_connect_timeout_seconds: int = 10
+    # A rendered publication is truncated past this many characters, so one document cannot
+    # fill the calling model's context. Tune it to the context budget of the client in use.
+    insee_document_max_markdown_chars: int = 30_000
     melodi_data_base_url: str = "https://api.insee.fr/melodi/data"
     melodi_request_timeout_seconds: int = 30
     melodi_connect_timeout_seconds: int = 10

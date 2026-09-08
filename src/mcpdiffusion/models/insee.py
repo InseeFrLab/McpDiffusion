@@ -8,10 +8,12 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, Field
 
 # ----------------------------------------------------------------------------------------------------------------------
-# Constants ------------------------------------------------------------------------------------------------------------
+# Schema bounds --------------------------------------------------------------------------------------------------------
 # ----------------------------------------------------------------------------------------------------------------------
 
-# Fixme: a lot of values in here belongs in settings
+# Deliberately not settings: these bound the tool's published schema, so an env-driven value would
+# advertise a different contract per deployment under the same tool name. They are also read at
+# import time, before any Settings instance exists.
 DEFAULT_RESULT_COUNT = 10
 MAX_RESULT_COUNT = 20
 

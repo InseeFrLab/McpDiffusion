@@ -10,10 +10,13 @@ from pydantic import BaseModel, Field
 from ..data.rmes.graph_categories import CATEGORY_DEFINITIONS, FALLBACK_CATEGORY_DEFINITION
 
 # ----------------------------------------------------------------------------------------------------------------------
-# Constants ------------------------------------------------------------------------------------------------------------
+# Schema bounds --------------------------------------------------------------------------------------------------------
 # ----------------------------------------------------------------------------------------------------------------------
 
-# Fixme: a lot of values in here belongs in settings
+# Deliberately not settings: these bound the tool's published schema, so an env-driven value would
+# advertise a different contract per deployment under the same tool name. They are also read at
+# import time, before any Settings instance exists. The budgets an operator does tune are the
+# RMES_GRAPH_LISTING_* settings, which the graph store service takes as constructor arguments.
 DEFAULT_QUERY_TIMEOUT_SECONDS = 20.0
 MAX_QUERY_TIMEOUT_SECONDS = 60.0
 DEFAULT_ROW_LIMIT = 200

@@ -15,13 +15,13 @@ from typing import Any
 import httpx
 
 from ...error import AppToolError, ErrorCode
-from ...models.rmes import (
-    DEFAULT_QUERY_TIMEOUT_SECONDS,
-    MAX_QUERY_TIMEOUT_SECONDS,
-    MAX_ROW_LIMIT,
-    GraphRow,
-    ResourceProperty,
-)
+from ...models.rmes import GraphRow, ResourceProperty
+
+# describe_rmes_resource issues a fixed query the model cannot size, so it carries its own budget.
+# These numbers were once the whole module's shared budget. Once the same values also became
+# run_rmes_sparql's schema bounds, sharing them let one tool's parameters govern this one.
+RESOURCE_QUERY_TIMEOUT_SECONDS = 20.0
+RESOURCE_QUERY_ROW_LIMIT = 2000
 
 # Ask the store for one row per named graph, with how many triples it holds, biggest first.
 # `?s ?p ?o` matches every triple, so COUNT(*) per ?g is that graph's size. It is the only
@@ -120,7 +120,7 @@ def build_resource_query(resource_uri: str, graph_uri: str | None) -> str:
         GRAPH {graph_clause} {{ ?o ?p <{resource_uri}> }}
         BIND("incoming" AS ?direction)
       }}
-    }} LIMIT {MAX_ROW_LIMIT}
+    }} LIMIT {RESOURCE_QUERY_ROW_LIMIT}
     """
 
 
@@ -176,7 +176,7 @@ class RmesGraphStoreService:
                 self._sparql_endpoint_url,
                 data={"query": effective_query},
                 headers={"Accept": accept},
-                timeout=min(timeout_seconds, MAX_QUERY_TIMEOUT_SECONDS),
+                timeout=timeout_seconds,
             )
             response.raise_for_status()
         except httpx.TimeoutException:
@@ -267,7 +267,7 @@ class RmesGraphStoreService:
         """Return every triple the endpoint holds about the resource, in either direction."""
         response = await self.execute(
             build_resource_query(resource_uri, graph_uri),
-            timeout_seconds=DEFAULT_QUERY_TIMEOUT_SECONDS,
-            max_rows=MAX_ROW_LIMIT,
+            timeout_seconds=RESOURCE_QUERY_TIMEOUT_SECONDS,
+            max_rows=RESOURCE_QUERY_ROW_LIMIT,
         )
         return parse_resource_properties(response.bindings or [])

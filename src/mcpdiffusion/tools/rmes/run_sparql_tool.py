@@ -9,6 +9,7 @@ from ...error import AppToolError, ErrorCode
 from ...models.rmes import (
     DEFAULT_QUERY_TIMEOUT_SECONDS,
     DEFAULT_ROW_LIMIT,
+    MAX_QUERY_TIMEOUT_SECONDS,
     MAX_ROW_LIMIT,
     MaxRows,
     SparqlOutput,
@@ -71,7 +72,7 @@ async def run_rmes_sparql(
 
     response = await rmes_graph_store_service.execute(
         query=sparql_query,
-        timeout_seconds=timeout_seconds,
+        timeout_seconds=min(timeout_seconds, MAX_QUERY_TIMEOUT_SECONDS),
         max_rows=max(1, min(max_rows, MAX_ROW_LIMIT)),
     )
     if response.turtle is not None:

@@ -1,5 +1,16 @@
 """Curated INSEE key indicators (homepage data)."""
 
+from typing import TypedDict
+
+
+class KeyIndicatorEntry(TypedDict):
+    """One curated figure. The keys are the source data's, hence French."""
+
+    cle: str
+    alias: str
+    valeur: str
+
+
 # Business rule: these figures are frozen literals — nothing refreshes them, so the server reports whatever
 # was true when this file was last edited, while each sentence asserts its own date. Whether to fetch
 # insee.fr live, derive them from the Elasticsearch index, or keep a curated list with a visible
@@ -8,8 +19,7 @@
 # The tool description used to promise `mainIndicators` with a per-indicator link to pass to
 # `get_insee_document`, plus `lastArticles` and `keyGraphics`. None of that was ever produced. It is
 # recorded here because it says what the tool was meant to be, and is worth raising in that decision.
-# Fixme: i feel this list can be typed, or at least the objects within
-KEY_INDICATORS = [
+KEY_INDICATORS: list[KeyIndicatorEntry] = [
     {
         "cle": "estimation de population France",
         "alias": "",

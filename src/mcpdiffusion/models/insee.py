@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import re
 from enum import StrEnum
 from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field
+
+from ..data.insee.themes import DICT_THEME_CONJ, KEYS_THEME_NIV1
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Schema bounds --------------------------------------------------------------------------------------------------------
@@ -26,20 +29,20 @@ MAX_DOCUMENT_URLS = 10
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-# Fixme: a lot of static data from this file seems derived from the one in the 'data' package
-#  this could be merged / refactored / better exploited
-class ThemeChoice(StrEnum):
-    ALL = "ALL"
-    METHODES = "Methodes"
-    DEMOGRAPHIE = "Demographie"
-    REVENUS = "Revenus - Pouvoir d'achat - Consommation"
-    CONDITIONS = "Conditions de vie - Societe"
-    TRAVAIL = "Marche du travail - Salaires"
-    ECONOMIE = "Economie - Conjoncture - Comptes nationaux"
-    DD = "Developpement durable - Environnement"
-    ENTREPRISES = "Entreprises"
-    SECTEURS = "Secteurs d'activite"
-    TERRITOIRES = "Territoires, villes et quartiers"
+def build_enum_member_name(label: str) -> str:
+    """Turn a theme label into a usable member name. Only `ALL` is ever referenced by name."""
+    return re.sub(r"\W+", "_", label).strip("_").upper()
+
+
+# Derived from the data tables, so a theme cannot be offered to the caller without being searchable,
+# nor searchable without being offered. "ALL" is not a theme: it means "do not filter".
+ThemeChoice = StrEnum(
+    "ThemeChoice",
+    {
+        "ALL": "ALL",
+        **{build_enum_member_name(theme): theme for theme in KEYS_THEME_NIV1},
+    },
+)
 
 
 class GeoLevelChoice(StrEnum):
@@ -51,20 +54,10 @@ class GeoLevelChoice(StrEnum):
     FRANCE = "FRANCE"
 
 
-class ThemeConjonctureChoice(StrEnum):
-    INDUSTRY = "Industrial production and activity"
-    BUILDING = "Construction and building sector"
-    HOUSING = "Housing and real estate"
-    RETAIL = "Retail, wholesale and services"
-    BUSINESS = "Business demographics and confidence"
-    EMPLOYMENT = "Employment, unemployment and labour market"
-    WAGES = "Wages and labour costs"
-    PUBLIC_SECTOR = "Public sector employment and pay"
-    CONSUMPTION = "Households, consumption and health"
-    PRICES = "Inflation and producer prices"
-    ACCOUNTING = "National accounts and public finance"
-    TRANSPORT = "Transport and tourism"
-    FINANCE = "Business financing"
+ThemeConjonctureChoice = StrEnum(
+    "ThemeConjonctureChoice",
+    {build_enum_member_name(theme): theme for theme in DICT_THEME_CONJ},
+)
 
 
 # ----------------------------------------------------------------------------------------------------------------------

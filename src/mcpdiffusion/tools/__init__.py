@@ -29,7 +29,7 @@ from .send_feedback_tool import send_feedback
 
 def register_tools(mcp: FastMCP, settings: Settings) -> None:
     """Register the enabled tools, handing each the settings it needs."""
-    if settings.enable_inseefr_tools:
+    if settings.enable_insee_tools:
         mcp.add_tool(search_insee_documents)
         mcp.add_tool(get_insee_homepage)
         mcp.add_tool(get_insee_document)

@@ -185,14 +185,14 @@ FEEDBACK_SECTION = """
 
 
 def build_instructions(
-    enable_inseefr_tools: bool,
+    enable_insee_tools: bool,
     enable_melodi_tools: bool,
     enable_rmes_tools: bool,
     enable_feedback_tool: bool,
 ) -> str:
     """Assemble the guidance for the tools this deployment actually registers."""
     sections = [OVERVIEW, GLOBAL_RULES]
-    if enable_inseefr_tools:
+    if enable_insee_tools:
         sections.append(INSEE_SECTION)
     if enable_melodi_tools:
         sections.append(MELODI_SECTION)

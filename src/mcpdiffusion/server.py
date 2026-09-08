@@ -25,7 +25,7 @@ mcp = FastMCP(
     # Routing guidance, delivered in the handshake so it reaches the caller without relying on a
     # separate file being loaded. Built from the enabled families so it never names a missing tool.
     instructions=build_instructions(
-        enable_inseefr_tools=settings.enable_inseefr_tools,
+        enable_insee_tools=settings.enable_insee_tools,
         enable_melodi_tools=settings.enable_melodi_tools,
         enable_rmes_tools=settings.enable_rmes_tools,
         enable_feedback_tool=settings.enable_feedback_tool,

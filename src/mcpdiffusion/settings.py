@@ -19,7 +19,8 @@ class Settings(BaseSettings):
     trusted_proxy_hosts: list[str] = ["127.0.0.1"]
 
     # Tool selection ---------------------------------------------------------------------------------------------------
-    enable_inseefr_tools: bool = True
+    # insee.fr, the website. MELODI and RMES are INSEE sources too; this flag is only the site.
+    enable_insee_tools: bool = True
     enable_melodi_tools: bool = True
     enable_rmes_tools: bool = True
     # Reporting only: it records to the server log and needs no backend.
@@ -69,10 +70,10 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def require_elasticsearch_when_it_is_searched(self) -> "Settings":
         """Fail at startup rather than on the first search that needs a host."""
-        if self.es_host is None and (self.enable_inseefr_tools or self.enable_melodi_tools):
+        if self.es_host is None and (self.enable_insee_tools or self.enable_melodi_tools):
             raise ValueError(
                 "ES_HOST is required because the insee.fr or Melodi tools are enabled. "
-                "Set it, or disable those families with ENABLE_INSEEFR_TOOLS=false and "
+                "Set it, or disable those families with ENABLE_INSEE_TOOLS=false and "
                 "ENABLE_MELODI_TOOLS=false."
             )
         return self

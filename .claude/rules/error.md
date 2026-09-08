@@ -10,7 +10,7 @@ error contract — consistency means a consistent message, produced in one place
 - `core/errors.py` owns every error type. Nothing else defines an error enum, model or vocabulary.
 - Error types subclass `ToolError` — its message always reaches the client. Anything else is an internal
   fault and must not leak.
-- Code and retryability are attributes on the exception, never formatted into the message.
+- Code and retry-ability are attributes on the exception, never formatted into the message.
 
 ## Raising
 

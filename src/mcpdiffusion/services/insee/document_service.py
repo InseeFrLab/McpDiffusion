@@ -223,14 +223,18 @@ class InseeDocumentService:
         """
         try:
             html = await self.fetch_html(url)
-            markdown = extract(html, options=TRAFILATURA_OPTIONS) or ""
+            # Rendering a page costs 80-1000 ms of CPU. Left on the event loop it stalls every other
+            # request in flight, not just this one, so it runs in a worker thread. Sharing
+            # TRAFILATURA_OPTIONS across threads is safe: extract() only reads it.
+            markdown = await asyncio.to_thread(extract, html, options=TRAFILATURA_OPTIONS) or ""
             markdown, truncated = (
                 truncate_markdown(markdown, limit=self._max_markdown_chars) if truncate_content else (markdown, False)
             )
 
             table_of_contents: TableOfContents | None = None
             if include_table_of_contents:
-                entries = parse_table_of_contents(
+                entries = await asyncio.to_thread(
+                    parse_table_of_contents,
                     html=html,
                     base_url=str(self._http_client.base_url),
                 )

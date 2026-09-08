@@ -14,7 +14,7 @@ from typing import Any
 
 import httpx
 
-from ...error import AppToolError, ErrorCode
+from ...errors import AppToolError, ErrorCode
 from ...models.rmes import GraphRow, ResourceProperty
 
 # describe_rmes_resource issues a fixed query the model cannot size, so it carries its own budget.

@@ -12,13 +12,13 @@ from elasticsearch.dsl.query import Query
 from elasticsearch.dsl.response import Hit
 from elasticsearch.dsl.utils import AttrList
 
+from ...errors.elasticsearch_tool_error_handler import elasticsearch_tool_error_handler
 from ...models.melodi import (
     ColumnResult,
     DatasetDescription,
     DatasetSearchResult,
     Modality,
 )
-from ..elasticsearch_failures import elasticsearch_failures_as_tool_errors
 
 # The column query asks for a fixed page of columns and narrows within them via inner_hits.
 COLUMN_SEARCH_SIZE = 20
@@ -194,7 +194,7 @@ class MelodiIndexService:
             .using(self._elasticsearch_client)
             .index(self._datasets_index)
         )
-        async with elasticsearch_failures_as_tool_errors("Melodi datasets"):
+        async with elasticsearch_tool_error_handler("Melodi datasets"):
             response = await search.execute()
 
         results: list[DatasetSearchResult] = []
@@ -227,7 +227,7 @@ class MelodiIndexService:
             .using(self._elasticsearch_client)
             .index(self._columns_index)
         )
-        async with elasticsearch_failures_as_tool_errors("Melodi columns"):
+        async with elasticsearch_tool_error_handler("Melodi columns"):
             response = await search.execute()
 
         results: list[ColumnResult] = []

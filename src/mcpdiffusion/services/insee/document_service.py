@@ -11,7 +11,7 @@ from bs4 import BeautifulSoup
 from trafilatura import extract
 from trafilatura.settings import Extractor
 
-from ...error import AppToolError, ErrorCode
+from ...errors import AppToolError, ErrorCode
 from ...models.insee import DocumentResult, TableOfContents
 
 logger = logging.getLogger(__name__)

@@ -16,11 +16,11 @@ from http import HTTPStatus
 
 from elasticsearch import ApiError, TransportError
 
-from ..error import AppToolError, ErrorCode
+from .error import AppToolError, ErrorCode
 
 
 @asynccontextmanager
-async def elasticsearch_failures_as_tool_errors(backend_label: str) -> AsyncIterator[None]:
+async def elasticsearch_tool_error_handler(backend_label: str) -> AsyncIterator[None]:
     """Translate a failed Elasticsearch search into an `AppToolError` naming the backend.
 
     Wraps the `await` rather than performing it, so it fits both the DSL and the raw client.

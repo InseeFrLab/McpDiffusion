@@ -20,8 +20,8 @@ from elasticsearch.dsl.response import Response
 
 from ...data.insee.geography import DICT_GEO
 from ...data.insee.themes import DICT_THEME_CONJ, KEYS_THEME_NIV1
+from ...errors.elasticsearch_tool_error_handler import elasticsearch_tool_error_handler
 from ...models.insee import DocumentHit
-from ..elasticsearch_failures import elasticsearch_failures_as_tool_errors
 
 RAPIDES_COLLECTION = "Informations rapides"
 CHIFFRES_CLES_CATEGORY = "Chiffres-clés"
@@ -327,7 +327,7 @@ class InseeIndexService:
     ) -> list[DocumentHit]:
         """Bind the search to the client and index, execute it, and map the hits."""
         bound = search.using(self._elasticsearch_client).index(self._publications_index)
-        async with elasticsearch_failures_as_tool_errors(backend_label):
+        async with elasticsearch_tool_error_handler(backend_label):
             response = await bound.execute()
         return parse_document_hits(response)
 

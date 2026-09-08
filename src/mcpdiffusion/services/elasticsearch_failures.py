@@ -16,7 +16,7 @@ from http import HTTPStatus
 
 from elasticsearch import ApiError, TransportError
 
-from ..errors import AppToolError
+from ..error import AppToolError, ErrorCode
 
 
 @asynccontextmanager
@@ -34,7 +34,7 @@ async def elasticsearch_failures_as_tool_errors(backend_label: str) -> AsyncIter
         # the host and port, and that must not leave the process. The full cause, host included,
         # is in the server log via ErrorHandlingMiddleware.
         raise AppToolError(
-            "BACKEND_UNAVAILABLE",
+            ErrorCode.BACKEND_UNAVAILABLE,
             f"{backend_label} search backend unreachable ({type(exc).__name__}). Verify ES_HOST and try again.",
             retryable=True,
         )
@@ -42,26 +42,26 @@ async def elasticsearch_failures_as_tool_errors(backend_label: str) -> AsyncIter
         status = exc.status_code
         if status == HTTPStatus.NOT_FOUND:
             raise AppToolError(
-                "BACKEND_UNAVAILABLE",
+                ErrorCode.BACKEND_UNAVAILABLE,
                 f"The {backend_label} index is missing from Elasticsearch ({exc.error}). "
                 "The index is not loaded on the server, so no query against it can succeed. "
                 "Rephrasing will not help -- report this instead of retrying.",
             )
         if status == HTTPStatus.BAD_REQUEST:
             raise AppToolError(
-                "INVALID_QUERY",
+                ErrorCode.INVALID_QUERY,
                 f"Elasticsearch rejected the {backend_label} search as malformed "
                 f"({exc.error}). This is a defect in the server's query, not in the arguments "
                 "you passed. Report it instead of retrying.",
             )
         if status in (HTTPStatus.UNAUTHORIZED, HTTPStatus.FORBIDDEN):
             raise AppToolError(
-                "BACKEND_UNAVAILABLE",
+                ErrorCode.BACKEND_UNAVAILABLE,
                 f"Elasticsearch refused the {backend_label} search ({exc.error}). The server's "
                 "credentials are missing or insufficient. Report it instead of retrying.",
             )
         raise AppToolError(
-            "UPSTREAM_ERROR",
+            ErrorCode.UPSTREAM_ERROR,
             f"Elasticsearch returned HTTP {status} for the {backend_label} search ({exc.error}).",
             retryable=status >= HTTPStatus.INTERNAL_SERVER_ERROR,
         )

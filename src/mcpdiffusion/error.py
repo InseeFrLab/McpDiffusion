@@ -1,18 +1,26 @@
 """The single error type tools and services raise."""
 
-from typing import Literal
+from enum import StrEnum
 
 from fastmcp.exceptions import ToolError
 
-ErrorCode = Literal[
-    "INVALID_INPUT",
-    "BACKEND_UNAVAILABLE",
-    "UPSTREAM_ERROR",
-    "PARSE_ERROR",
-    "INVALID_QUERY",
-    "NOT_FOUND",
-    "UNKNOWN",
-]
+
+class ErrorCode(StrEnum):
+    """The closed vocabulary of failures a caller can be told about.
+
+    A member rather than a `Literal`: a literal is only a promise to a type checker, so a typo
+    reached the caller as an invented code. Referencing a member fails at the typo instead.
+    """
+
+    INVALID_INPUT = "INVALID_INPUT"
+    BACKEND_UNAVAILABLE = "BACKEND_UNAVAILABLE"
+    UPSTREAM_ERROR = "UPSTREAM_ERROR"
+    PARSE_ERROR = "PARSE_ERROR"
+    INVALID_QUERY = "INVALID_QUERY"
+    NOT_FOUND = "NOT_FOUND"
+    # A fault in this server rather than in the caller's input or a backend: a bug, logged
+    # in full server-side and reported to the caller only as ours to fix.
+    INTERNAL_ERROR = "INTERNAL_ERROR"
 
 
 class AppToolError(ToolError):

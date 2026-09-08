@@ -11,7 +11,7 @@ from bs4 import BeautifulSoup
 from trafilatura import extract
 from trafilatura.settings import Extractor
 
-from ...errors import AppToolError
+from ...error import AppToolError, ErrorCode
 from ...models.insee import DocumentResult, TableOfContents
 
 logger = logging.getLogger(__name__)
@@ -155,24 +155,24 @@ class InseeDocumentService:
             return response.text
         except httpx.TimeoutException as exc:
             raise AppToolError(
-                "BACKEND_UNAVAILABLE",
+                ErrorCode.BACKEND_UNAVAILABLE,
                 f"insee.fr timed out fetching {target}: {exc}",
                 retryable=True,
             )
         except httpx.HTTPStatusError as exc:
             if exc.response.status_code == httpx.codes.NOT_FOUND:
                 raise AppToolError(
-                    "NOT_FOUND",
+                    ErrorCode.NOT_FOUND,
                     f"INSEE document not found at {target} (HTTP 404). Verify the URL with `search_insee_documents`.",
                 )
             raise AppToolError(
-                "UPSTREAM_ERROR",
+                ErrorCode.UPSTREAM_ERROR,
                 f"insee.fr returned HTTP {exc.response.status_code} for {target}.",
                 retryable=exc.response.is_server_error,
             )
         except httpx.HTTPError as exc:
             raise AppToolError(
-                "BACKEND_UNAVAILABLE",
+                ErrorCode.BACKEND_UNAVAILABLE,
                 f"Network error fetching {target}: {exc}",
                 retryable=True,
             )
@@ -186,7 +186,7 @@ class InseeDocumentService:
         """Fetch and render each URL, reporting per-URL failures rather than aborting the batch."""
         if not document_urls:
             raise AppToolError(
-                "INVALID_INPUT",
+                ErrorCode.INVALID_INPUT,
                 "document_urls must contain at least one URL. Use `search_insee_documents` to find URLs first.",
             )
 
@@ -231,7 +231,9 @@ class InseeDocumentService:
                 results.append(
                     build_failed_document(
                         url=url,
-                        message="[UNKNOWN] Could not fetch this document.",
+                        # Not raised, so the prefix an AppToolError would add is built here,
+                        # from the same vocabulary rather than a hand-written literal.
+                        message=f"[{ErrorCode.INTERNAL_ERROR}] Could not fetch this document.",
                     )
                 )
 

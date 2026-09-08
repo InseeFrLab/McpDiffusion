@@ -14,7 +14,7 @@ from typing import Any
 
 import httpx
 
-from ...errors import AppToolError
+from ...error import AppToolError, ErrorCode
 from ...models.rmes import (
     DEFAULT_QUERY_TIMEOUT_SECONDS,
     MAX_QUERY_TIMEOUT_SECONDS,
@@ -163,7 +163,7 @@ class RmesGraphStoreService:
         query_form = detect_query_form(query)
         if query_form == UNKNOWN_FORM:
             raise AppToolError(
-                "INVALID_QUERY",
+                ErrorCode.INVALID_QUERY,
                 "Impossible de detecter SELECT / ASK / CONSTRUCT / DESCRIBE dans la requete. "
                 "Verifie la syntaxe SPARQL (pas GraphQL).",
             )
@@ -181,7 +181,7 @@ class RmesGraphStoreService:
             response.raise_for_status()
         except httpx.TimeoutException:
             raise AppToolError(
-                "BACKEND_UNAVAILABLE",
+                ErrorCode.BACKEND_UNAVAILABLE,
                 f"Le endpoint RMES n'a pas repondu en moins de {timeout_seconds}s. "
                 "Restreins la requete (ajoute une clause GRAPH precise, reduis le LIMIT, "
                 "evite les scans sans filtre sur tous les graphes).",
@@ -192,17 +192,17 @@ class RmesGraphStoreService:
             body = exc.response.text[:2000]
             if status == httpx.codes.BAD_REQUEST:
                 raise AppToolError(
-                    "INVALID_QUERY",
+                    ErrorCode.INVALID_QUERY,
                     f"Le endpoint RMES a rejete la requete (erreur de syntaxe SPARQL probable) : {body}",
                 )
             raise AppToolError(
-                "UPSTREAM_ERROR",
+                ErrorCode.UPSTREAM_ERROR,
                 f"Le endpoint RMES a repondu {status} : {body}",
                 retryable=exc.response.is_server_error,
             )
         except httpx.RequestError as exc:
             raise AppToolError(
-                "BACKEND_UNAVAILABLE",
+                ErrorCode.BACKEND_UNAVAILABLE,
                 f"Impossible de contacter l'endpoint RMES ({type(exc).__name__}).",
                 retryable=True,
             )
@@ -217,7 +217,7 @@ class RmesGraphStoreService:
             payload = response.json()
         except ValueError as exc:
             raise AppToolError(
-                "PARSE_ERROR",
+                ErrorCode.PARSE_ERROR,
                 f"Le endpoint RMES a renvoye une reponse non-JSON : {exc}",
             )
 

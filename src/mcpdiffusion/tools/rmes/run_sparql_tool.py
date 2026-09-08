@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastmcp.dependencies import Depends
 
 from ...dependencies.rmes import get_rmes_graph_store_service
-from ...errors import AppToolError
+from ...error import AppToolError, ErrorCode
 from ...models.rmes import (
     DEFAULT_QUERY_TIMEOUT_SECONDS,
     DEFAULT_ROW_LIMIT,
@@ -65,7 +65,7 @@ async def run_rmes_sparql(
     """
     if not sparql_query or not sparql_query.strip():
         raise AppToolError(
-            "INVALID_INPUT",
+            ErrorCode.INVALID_INPUT,
             "La requete SPARQL est vide. Fournis une requete SELECT, ASK, CONSTRUCT ou DESCRIBE.",
         )
 

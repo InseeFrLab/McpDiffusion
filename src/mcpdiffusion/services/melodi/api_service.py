@@ -6,7 +6,7 @@ from typing import Any
 
 import httpx
 
-from ...errors import AppToolError
+from ...error import AppToolError, ErrorCode
 
 
 class MelodiApiService:
@@ -31,7 +31,7 @@ class MelodiApiService:
             response.raise_for_status()
         except httpx.TimeoutException as exc:
             raise AppToolError(
-                "BACKEND_UNAVAILABLE",
+                ErrorCode.BACKEND_UNAVAILABLE,
                 f"Melodi API timed out calling {url}: {exc}. Try again or narrow the query.",
                 retryable=True,
             )
@@ -43,7 +43,7 @@ class MelodiApiService:
             # on it would break the moment it is reworded -- so name every remedy instead.
             if status == httpx.codes.BAD_REQUEST:
                 raise AppToolError(
-                    "INVALID_INPUT",
+                    ErrorCode.INVALID_INPUT,
                     f'Melodi API rejected the query (HTTP 400). Upstream detail: "{body_excerpt}" '
                     f"Columns/values passed: {column_filters}. "
                     "Confirm the dataset_id with `search_melodi_datasets`, and the column ids "
@@ -51,18 +51,18 @@ class MelodiApiService:
                 )
             if status == httpx.codes.NOT_FOUND:
                 raise AppToolError(
-                    "NOT_FOUND",
+                    ErrorCode.NOT_FOUND,
                     f"Melodi dataset {dataset_id!r} not found (HTTP 404). "
                     "Check the dataset_id with `search_melodi_datasets`.",
                 )
             raise AppToolError(
-                "UPSTREAM_ERROR",
+                ErrorCode.UPSTREAM_ERROR,
                 f'Melodi API returned HTTP {status}: "{body_excerpt}"',
                 retryable=exc.response.is_server_error,
             )
         except httpx.HTTPError as exc:
             raise AppToolError(
-                "BACKEND_UNAVAILABLE",
+                ErrorCode.BACKEND_UNAVAILABLE,
                 f"Could not reach Melodi API at {url}: {exc}",
                 retryable=True,
             )
@@ -71,14 +71,14 @@ class MelodiApiService:
             payload = response.json()
         except ValueError as exc:
             raise AppToolError(
-                "PARSE_ERROR",
+                ErrorCode.PARSE_ERROR,
                 f"Melodi API returned non-JSON response: {exc}",
             )
 
         observations = payload.get("observations") if isinstance(payload, dict) else None
         if not isinstance(observations, list):
             raise AppToolError(
-                "PARSE_ERROR",
+                ErrorCode.PARSE_ERROR,
                 "Melodi API response did not contain an 'observations' list.",
             )
         return observations

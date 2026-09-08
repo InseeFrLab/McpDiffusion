@@ -12,9 +12,9 @@ from fastmcp.server.middleware.timing import TimingMiddleware
 from .instructions import build_instructions
 from .lifespan import build_lifespan
 from .logging import build_logging_config, configure_logging
-from .rate_limiting import resolve_client_host
 from .settings import load_settings
 from .tools import register_tools
+from .utils.client_host import resolve_client_host
 
 settings = load_settings()
 configure_logging(settings.log_level)

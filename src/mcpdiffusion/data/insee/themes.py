@@ -1,8 +1,8 @@
 """INSEE theme mappings and conjoncture sub-themes."""
 
-# Fixme: Is that the right place for this kind of data? In the source code?
-#  Maybe a JSON file or a database is a better place
-# Fixme: This seems like mapping themes to IDs manually, this is fragile if so...
+# Business rule: these ids are insee.fr's own, transcribed by hand, and nothing here can verify
+# them. A wrong id silently searches the wrong theme rather than failing, so only whoever owns
+# the site's taxonomy can confirm them or point at a feed to derive them from. Preserved as is.
 KEYS_THEME_NIV1 = {
     "Demographie": 0,
     "Conditions de vie - Societe": 6,

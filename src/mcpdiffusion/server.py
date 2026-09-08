@@ -67,9 +67,12 @@ mcp.add_middleware(
 if settings.allowed_hosts == ["*"]:
     logger.warning("allowed_hosts is ['*']. Set ALLOWED_HOSTS before exposing the server publicly.")
 
+# Enforced rather than "auto": this server is published under a real hostname, so it should
+# check the one it was reached by instead of leaving the decision to a heuristic.
 app = mcp.http_app(
-    host_origin_protection="auto",
+    host_origin_protection=True,
     allowed_hosts=settings.allowed_hosts,
+    allowed_origins=settings.allowed_origins,
 )
 
 if __name__ == "__main__":

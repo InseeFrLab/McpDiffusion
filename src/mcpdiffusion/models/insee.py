@@ -16,6 +16,9 @@ from pydantic import BaseModel, Field
 # import time, before any Settings instance exists.
 DEFAULT_RESULT_COUNT = 10
 MAX_RESULT_COUNT = 20
+# Each URL costs one fetch and one extraction, so a long list is a slow call and a load on
+# insee.fr. Bounded here rather than checked in the service.
+MAX_DOCUMENT_URLS = 10
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -160,6 +163,7 @@ DocumentUrls = Annotated[
     list[str],
     Field(
         description=("List of relative URLs to retrieve (e.g. '/fr/statistiques/4277658?sommaire=4318291')."),
+        max_length=MAX_DOCUMENT_URLS,
         examples=[
             ["/fr/statistiques/4277658?sommaire=4318291"],
         ],

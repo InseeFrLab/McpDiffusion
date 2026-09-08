@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from collections import defaultdict
 from urllib.parse import urljoin, urlparse
@@ -194,54 +195,67 @@ class InseeDocumentService:
                 "document_urls must contain at least one URL. Use `search_insee_documents` to find URLs first.",
             )
 
-        results: list[DocumentResult] = []
-        # Fixme: the URLs are fetched one after another, so the call takes the sum of their times
-        for url in document_urls:
-            try:
-                html = await self.fetch_html(url)
-                markdown = extract(html, options=TRAFILATURA_OPTIONS) or ""
-                markdown, truncated = (
-                    truncate_markdown(markdown, limit=self._max_markdown_chars)
-                    if truncate_content
-                    else (markdown, False)
-                )
-
-                table_of_contents: TableOfContents | None = None
-                if include_table_of_contents:
-                    entries = parse_table_of_contents(
-                        html=html,
-                        base_url=str(self._http_client.base_url),
-                    )
-                    table_of_contents = group_table_of_contents(entries) if entries else None
-
-                results.append(
-                    DocumentResult(
-                        id=url,
-                        status="success",
-                        markdown_content=markdown,
-                        sommaire=table_of_contents,
-                        truncated=truncated,
-                        error=None,
-                    )
-                )
-            except AppToolError as exc:
-                # A typed failure is written for the caller, so it is safe to pass on.
-                results.append(
-                    build_failed_document(
+        # Bounded by MAX_DOCUMENT_URLS on the tool schema, so this fans out to at most that many
+        # requests. gather keeps the results in the order the URLs were given.
+        return list(
+            await asyncio.gather(
+                *(
+                    self.fetch_document(
                         url=url,
-                        message=str(exc),
+                        include_table_of_contents=include_table_of_contents,
+                        truncate_content=truncate_content,
                     )
+                    for url in document_urls
                 )
-            except Exception:
-                # Anything else is a bug: log it here, tell the caller only that this URL failed.
-                logger.exception("Unexpected failure fetching %s", url)
-                results.append(
-                    build_failed_document(
-                        url=url,
-                        # Not raised, so the prefix an AppToolError would add is built here,
-                        # from the same vocabulary rather than a hand-written literal.
-                        message=f"[{ErrorCode.INTERNAL_ERROR}] Could not fetch this document.",
-                    )
-                )
+            )
+        )
 
-        return results
+    async def fetch_document(
+        self,
+        url: str,
+        include_table_of_contents: bool,
+        truncate_content: bool,
+    ) -> DocumentResult:
+        """Render one URL, returning its failure as a result rather than raising.
+
+        Every failure is reported in the same shape as a success, so one bad URL never costs the
+        caller the rest of the batch.
+        """
+        try:
+            html = await self.fetch_html(url)
+            markdown = extract(html, options=TRAFILATURA_OPTIONS) or ""
+            markdown, truncated = (
+                truncate_markdown(markdown, limit=self._max_markdown_chars) if truncate_content else (markdown, False)
+            )
+
+            table_of_contents: TableOfContents | None = None
+            if include_table_of_contents:
+                entries = parse_table_of_contents(
+                    html=html,
+                    base_url=str(self._http_client.base_url),
+                )
+                table_of_contents = group_table_of_contents(entries) if entries else None
+
+            return DocumentResult(
+                id=url,
+                status="success",
+                markdown_content=markdown,
+                sommaire=table_of_contents,
+                truncated=truncated,
+                error=None,
+            )
+        except AppToolError as exc:
+            # A typed failure is written for the caller, so it is safe to pass on.
+            return build_failed_document(
+                url=url,
+                message=str(exc),
+            )
+        except Exception:
+            # Anything else is a bug: log it here, tell the caller only that this URL failed.
+            logger.exception("Unexpected failure fetching %s", url)
+            return build_failed_document(
+                url=url,
+                # Not raised, so the prefix an AppToolError would add is built here,
+                # from the same vocabulary rather than a hand-written literal.
+                message=f"[{ErrorCode.INTERNAL_ERROR}] Could not fetch this document.",
+            )

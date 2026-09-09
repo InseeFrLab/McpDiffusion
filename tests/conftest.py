@@ -1,7 +1,5 @@
 """Shared fixtures and helpers for all test files."""
 
-from __future__ import annotations
-
 import json
 from typing import Any
 

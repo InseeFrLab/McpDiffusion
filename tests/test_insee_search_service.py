@@ -1,7 +1,5 @@
 """Unit tests for mcpdiffusion.services.insee_search (pure logic, no ES)."""
 
-from __future__ import annotations
-
 from mcpdiffusion.services.insee_search import (
     _coerce_hit_value,
     apply_collection_filters,

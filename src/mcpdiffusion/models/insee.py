@@ -1,7 +1,5 @@
 """Pydantic schemas for INSEE.fr tools."""
 
-from __future__ import annotations
-
 import re
 from enum import StrEnum
 from typing import Annotated, Literal

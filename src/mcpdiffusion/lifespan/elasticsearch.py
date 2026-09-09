@@ -1,7 +1,5 @@
 """The Elasticsearch client, shared by the insee.fr and Melodi searches."""
 
-from __future__ import annotations
-
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager

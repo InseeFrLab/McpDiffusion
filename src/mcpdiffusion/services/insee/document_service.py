@@ -1,7 +1,5 @@
 """insee.fr document access: fetching a publication page and turning it into markdown."""
 
-from __future__ import annotations
-
 import asyncio
 import logging
 from collections import defaultdict

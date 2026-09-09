@@ -1,7 +1,5 @@
 """Unit tests for mcpdiffusion.services.feedback."""
 
-from __future__ import annotations
-
 from mcpdiffusion.models.feedback import SendFeedbackInput
 from mcpdiffusion.services.feedback import _ensure_feedback_file, send_feedback
 

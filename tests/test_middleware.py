@@ -1,7 +1,5 @@
 """Unit tests for mcpdiffusion.core.middleware (RateLimitMiddleware)."""
 
-from __future__ import annotations
-
 from mcpdiffusion.core.middleware import RateLimitMiddleware
 from starlette.applications import Starlette
 from starlette.requests import Request

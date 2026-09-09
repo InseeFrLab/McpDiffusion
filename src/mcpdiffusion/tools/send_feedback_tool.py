@@ -1,7 +1,5 @@
 """Tool: send_feedback."""
 
-from __future__ import annotations
-
 from ..models.feedback import Author, Feedback, FeedbackOutput
 from ..services.feedback import record_feedback
 

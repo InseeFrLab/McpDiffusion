@@ -1,7 +1,5 @@
 """Tool: search_melodi_datasets."""
 
-from __future__ import annotations
-
 from fastmcp.dependencies import Depends
 
 from ...dependencies.melodi import get_melodi_index_service

@@ -8,8 +8,6 @@ Every tool is a plain function, so none of them carries a registration wrapper. 
 service take it through `Depends`; `send_feedback` needs none.
 """
 
-from __future__ import annotations
-
 from fastmcp import FastMCP
 
 from ..settings import Settings

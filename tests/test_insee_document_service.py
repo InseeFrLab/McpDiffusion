@@ -1,7 +1,5 @@
 """Unit tests for mcpdiffusion.services.insee_document."""
 
-from __future__ import annotations
-
 import httpx
 import pytest
 from fastmcp.exceptions import ToolError

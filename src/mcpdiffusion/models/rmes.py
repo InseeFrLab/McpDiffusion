@@ -1,7 +1,5 @@
 """Pydantic schemas for RMES (SPARQL) tools."""
 
-from __future__ import annotations
-
 from enum import StrEnum
 from typing import Annotated, Any, Literal
 

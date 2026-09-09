@@ -1,7 +1,5 @@
 """Pydantic schemas for the feedback tool."""
 
-from __future__ import annotations
-
 from datetime import datetime
 from typing import Annotated, Literal
 

@@ -1,7 +1,5 @@
 """Tool: get_melodi_observations."""
 
-from __future__ import annotations
-
 from typing import Any
 
 from fastmcp.dependencies import Depends

@@ -4,8 +4,6 @@ All HTTP calls to the real SPARQL endpoint are mocked via monkeypatch on
 `mcpdiffusion.infra.sparql.get_sparql_client`, so these tests run offline.
 """
 
-from __future__ import annotations
-
 import httpx
 from fastmcp import Client
 

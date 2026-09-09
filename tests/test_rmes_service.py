@@ -1,7 +1,5 @@
 """Unit tests for mcpdiffusion.services.rmes (pure logic, no MCP layer)."""
 
-from __future__ import annotations
-
 import time
 
 import httpx

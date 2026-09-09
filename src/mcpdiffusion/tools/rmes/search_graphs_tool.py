@@ -1,7 +1,5 @@
 """Tool: search_rmes_graphs."""
 
-from __future__ import annotations
-
 from fastmcp.dependencies import Depends
 
 from ...dependencies.rmes import get_rmes_graph_store_service

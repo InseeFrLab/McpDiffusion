@@ -1,7 +1,5 @@
 """Tool: search_insee_documents."""
 
-from __future__ import annotations
-
 from fastmcp.dependencies import Depends
 
 from ...dependencies.insee import get_insee_index_service

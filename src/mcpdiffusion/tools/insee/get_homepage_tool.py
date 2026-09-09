@@ -1,7 +1,5 @@
 """Tool: get_insee_homepage."""
 
-from __future__ import annotations
-
 from ...data.insee.indicators import KEY_INDICATORS
 from ...models.insee import KeyIndicatorsOutput, KeyValueIndicator
 

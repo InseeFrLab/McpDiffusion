@@ -8,8 +8,6 @@ they keep and the filters they add. Each gets its own builder rather than one bu
 boolean flags, so no caller can ask for a combination that makes no sense.
 """
 
-from __future__ import annotations
-
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 

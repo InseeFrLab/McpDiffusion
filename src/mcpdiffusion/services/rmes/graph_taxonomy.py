@@ -6,8 +6,6 @@ read from a module global, so these functions work against any store.
 The static table says *which* families exist; this module says what matching one means.
 """
 
-from __future__ import annotations
-
 from collections.abc import Callable
 from dataclasses import dataclass
 

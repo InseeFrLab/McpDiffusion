@@ -7,8 +7,6 @@ This is the composition root: it is the one place that reads the whole `Settings
 below it has to.
 """
 
-from __future__ import annotations
-
 from collections.abc import AsyncIterator
 from contextlib import AsyncExitStack
 from typing import Any

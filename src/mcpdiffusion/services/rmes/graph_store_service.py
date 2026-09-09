@@ -4,8 +4,6 @@ The endpoint and its budgets are bound once at startup. Everything below the tra
 pure, so query shaping can be checked without reaching the network.
 """
 
-from __future__ import annotations
-
 import asyncio
 import re
 import time

@@ -1,7 +1,5 @@
 """Melodi's REST API access: the observations endpoint."""
 
-from __future__ import annotations
-
 from typing import Any
 
 import httpx

@@ -4,8 +4,6 @@ Elasticsearch vocabulary stops here. Tools never see a `Hit`, a `_source` or an 
 envelope, so a change in the index shape is contained to this file.
 """
 
-from __future__ import annotations
-
 from elasticsearch import AsyncElasticsearch
 from elasticsearch.dsl import AsyncSearch, Q
 from elasticsearch.dsl.query import Query

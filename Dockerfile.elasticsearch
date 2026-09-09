@@ -1,0 +1,24 @@
+# Elasticsearch carrying the INSEE snapshot, built for whichever architecture you are on.
+#
+# mirlon382/mcp_diffusion:db is published for linux/amd64 only. It is used here purely as a file
+# source: COPY --from reads its layers and never executes it, so no emulation is involved. What
+# actually runs is the official Elasticsearch image, which is multi-arch and therefore native on
+# arm64 and amd64 alike.
+#
+# The snapshot is a backup of the three indexes, not the indexes themselves. Elasticsearch starts
+# empty and only loads it once told to -- see the es-restore service in docker-compose.yml.
+
+FROM --platform=linux/amd64 mirlon382/mcp_diffusion:db AS snapshot
+
+FROM docker.elastic.co/elasticsearch/elasticsearch:9.3.2
+
+# Declared once and reused below. It cannot be read back out of `path.repo`: the dot makes
+# `$path.repo` expand as `${path}` followed by the text `.repo`, which would silently be wrong.
+ARG BACKUPS_DIR=/usr/share/elasticsearch/backups
+
+# Where the restore step looks for the backup. Set here rather than in compose so the image is
+# usable on its own, and so nothing depends on configuration baked into someone else's image.
+ENV path.repo=${BACKUPS_DIR}
+
+# Elasticsearch runs as the `elasticsearch` user and cannot read root-owned files.
+COPY --from=snapshot --chown=elasticsearch:root ${BACKUPS_DIR} ${BACKUPS_DIR}

@@ -66,8 +66,8 @@ uv sync                                       # install (dev deps included)
 uv run python -m mcpdiffusion.server          # run the server locally, needs ES_HOST
 uv run pytest -q                              # test suite — do not trust it, see Hard rules
 
-docker build -t mcp-insee .
-docker compose -f docker-compose-dev.yaml up  # server + MCP Inspector (needs the `elastic` network)
+cp .env.example .env                          # once, before the first compose run
+docker compose up --build                     # Elasticsearch + data + server + MCP Inspector
 ```
 
 ## Hard rules
@@ -87,7 +87,7 @@ docker compose -f docker-compose-dev.yaml up  # server + MCP Inspector (needs th
   env file is the only description of what this server can be configured with — how the values actually reach
   the process (shell, compose `env_file`, k8s `env:`) does not change that.
 - **Keep every place that names a setting in sync**: the example env file, the env file
-  `docker-compose-dev.yaml` expects, and the `env:` block in `k8s/`. A variable set in a manifest that
+  `docker-compose.yml` expects, and the `env:` block in `k8s/`. A variable set in a manifest that
   `Settings` no longer reads is a bug, not leftovers. Touching `k8s/` for this is expected — it is the
   exception to the rule below.
 - Ask before adding a dependency, a new tool, or a new data source.

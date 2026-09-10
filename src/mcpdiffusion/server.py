@@ -1,75 +1,101 @@
-"""FastMCP entrypoint for the mcp-diffusion server.
-
-Boots Uvicorn, registers every tool via `tools.register_tools(mcp)`,
-and exposes the HTTP transport on MCP_HOST:MCP_PORT.
-"""
-from __future__ import annotations
+"""Entrypoint: builds the settings, the clients and the MCP application, then serves it over HTTP."""
 
 import logging
-import os
-import sys
-from pathlib import Path  # noqa: F401 (kept for future config discovery)
+from textwrap import dedent
 
-from dotenv import load_dotenv
+import uvicorn
 from fastmcp import FastMCP
-from starlette.middleware.trustedhost import TrustedHostMiddleware
+from fastmcp.server.middleware.error_handling import ErrorHandlingMiddleware
+from fastmcp.server.middleware.logging import LoggingMiddleware
+from fastmcp.server.middleware.rate_limiting import SlidingWindowRateLimitingMiddleware
+from fastmcp.server.middleware.timing import TimingMiddleware
 
-from .helpers.logging import MAIN_LOGGER_NAME, UVICORN_LOGGING_CONFIG
+from .lifespan import build_lifespan
+from .logging import build_logging_config, configure_logging
+from .settings import load_settings
 from .tools import register_tools
+from .utils.client_host import resolve_client_host
 
-from mcpdiffusion.middleware import RateLimitMiddleware
+settings = load_settings()
+configure_logging(settings.log_level)
+logger = logging.getLogger(__name__)
 
-load_dotenv()
+# Sent to the client in the handshake. Only what belongs to no single tool: which tool to call, and when,
+# is in the tool descriptions, where it reaches the model even when a client drops these instructions.
 
-logger = logging.getLogger(MAIN_LOGGER_NAME)
+# language=Markdown
+INSTRUCTIONS = dedent("""
+    This server exposes INSEE (French national statistics) data through three sources:
 
+    - insee.fr -- publications, rapid releases and headline indicators
+    - MELODI -- the dataset catalogue and the observations themselves
+    - RMES -- statistical metadata: definitions and nomenclatures. It holds no figures.
 
-mcp = FastMCP("INSEE-mcp-diffusion")
+    Rules that apply to every tool:
 
-toollist=os.getenv("TOOLLIST", None)
+    - Never guess a dataset id, a modality code, a document URL or a graph URI. Each is opaque and must come
+      from a discovery call first.
+    - The data is French. Search with French keywords and rich synonyms.
+    - An empty result is a valid answer, not a failure. It usually means the filters were too narrow.
+    - A tool description may point you at a tool from another source. Only the tools in your tool list exist
+      here; if a description names one you do not have, ignore it and use what you have.
+""").strip()
 
-register_tools(mcp, toollist=toollist)
-
-app = mcp.http_app()
-
-
-# TrustedHostMiddleware: default permits any host. In production, set
-# ALLOWED_HOSTS to a comma-separated list behind your reverse proxy.
-_allowed_hosts_raw = os.getenv("ALLOWED_HOSTS", "*").strip()
-_allowed_hosts = (
-    ["*"] if _allowed_hosts_raw == "*"
-    else [h.strip() for h in _allowed_hosts_raw.split(",") if h.strip()]
+mcp = FastMCP(
+    "INSEE-mcp-diffusion",
+    instructions=INSTRUCTIONS,
+    # Only AppToolError messages reach the caller; anything else is a bug and is replaced
+    # by a generic message.
+    mask_error_details=True,
+    lifespan=build_lifespan(settings),
 )
-if _allowed_hosts == ["*"]:
-    logger.warning(
-        "TrustedHostMiddleware configured with allowed_hosts=['*']. "
-        "Set ALLOWED_HOSTS before exposing the server publicly."
-    )
-app.add_middleware(TrustedHostMiddleware, allowed_hosts=_allowed_hosts)
-app.add_middleware(RateLimitMiddleware)
+
+register_tools(mcp, settings)
+
+# Order matters: error handling first so it sees the whole chain, logging last so it records what ran.
+# Each middleware logs under its own `fastmcp.*` logger; set levels there to tune the output.
+# None of them logs how many results a tool returned. If empty results become hard to diagnose, add an
+# `on_call_tool` middleware that inspects the ToolResult, or have the tool report it with `ctx.info`.
+mcp.add_middleware(
+    # include_traceback puts the original cause in the server log, which is the only place it is
+    # recoverable. transform_errors would promote our ToolErrors to JSON-RPC protocol errors labelled
+    # "Internal error", losing is_error and the message the caller is meant to act on.
+    ErrorHandlingMiddleware(
+        transform_errors=False,
+        include_traceback=True,
+    ),
+)
+mcp.add_middleware(
+    SlidingWindowRateLimitingMiddleware(
+        max_requests=settings.rate_limit_max_requests,
+        window_minutes=settings.rate_limit_window_minutes,
+        get_client_id=resolve_client_host,
+    ),
+)
+mcp.add_middleware(
+    TimingMiddleware(),
+)
+mcp.add_middleware(
+    LoggingMiddleware(),
+)
+
+if settings.allowed_hosts == ["*"]:
+    logger.warning("allowed_hosts is ['*']. Set ALLOWED_HOSTS before exposing the server publicly.")
+
+# Enforced rather than "auto": this server is published under a real hostname, so it should
+# check the one it was reached by instead of leaving the decision to a heuristic.
+app = mcp.http_app(
+    host_origin_protection=True,
+    allowed_hosts=settings.allowed_hosts,
+    allowed_origins=settings.allowed_origins,
+)
 
 if __name__ == "__main__":
-    import uvicorn
-
-    port_str = os.getenv("MCP_PORT", "8000")
-    host_str = os.getenv("MCP_HOST", "0.0.0.0")
-    try:
-        port = int(port_str)
-    except ValueError:
-        print(
-            f"Error: invalid MCP_PORT environment variable: {port_str!r}",
-            file=sys.stderr,
-        )
-        sys.exit(1)
-
-    forwarded_ips = os.getenv("FORWARDED_ALLOW_IPS", "*")
-
     uvicorn.run(
         app,
-        host=host_str,
-        port=port,
+        host=settings.mcp_host,
+        port=settings.mcp_port,
         proxy_headers=True,
-        forwarded_allow_ips=forwarded_ips,
-        log_level="info",
-        log_config=UVICORN_LOGGING_CONFIG,
+        forwarded_allow_ips=settings.trusted_proxy_hosts,
+        log_config=build_logging_config(settings.log_level),
     )

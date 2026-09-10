@@ -1,58 +1,48 @@
 """Tool registration entrypoint.
 
-Each tool module exposes a `register_xxx(mcp: FastMCP)` function. This file
-wires all of them in one place; to disable a tool, comment out its import
-and the corresponding call below.
+The only place that knows about the MCP server. Each group -- the three data sources, and the
+feedback tool -- is registered only when its flag is on: an unregistered tool is the one kind of
+"disabled" the protocol guarantees, unlike tag or visibility filtering, which a later call can undo.
+
+Every tool is a plain function, so none of them carries a registration wrapper. Those that need a
+service take it through `Depends`; `send_feedback` needs none.
 """
-from __future__ import annotations
 
-from mcp.server.fastmcp import FastMCP
+from fastmcp import FastMCP
 
-from .melodi_get_observations import register_get_melodi_observations
-from .melodi_search_datasets import register_search_melodi_datasets
-from .melodi_search_modalities import register_search_melodi_modalities
-from .insee_get_document import register_get_insee_document
-from .insee_get_homepage import register_get_insee_homepage
-from .insee_search_documents import register_search_insee_documents
-from .insee_search_conjoncture import register_search_insee_conjoncture
-from .insee_search_chiffrecle import register_search_insee_chiffreclef
-from .rmes_list_graphs import register_rmes_list_graphs
-from .rmes_describe_resource import register_rmes_describe_resource
-from .rmes_run_sparql import register_rmes_run_sparql
-from .extras_send_feedback import register_extras_send_feedback
+from ..settings import Settings
+from .insee.get_document_tool import get_insee_document
+from .insee.get_homepage_tool import get_insee_homepage
+from .insee.search_chiffrecle_tool import search_insee_chiffrecle
+from .insee.search_conjoncture_tool import search_insee_conjoncture
+from .insee.search_documents_tool import search_insee_documents
+from .melodi.get_observations_tool import get_melodi_observations
+from .melodi.search_datasets_tool import search_melodi_datasets
+from .melodi.search_modalities_tool import search_melodi_modalities
+from .rmes.describe_resource_tool import describe_rmes_resource
+from .rmes.run_sparql_tool import run_rmes_sparql
+from .rmes.search_graphs_tool import search_rmes_graphs
+from .send_feedback_tool import send_feedback
 
-def register_tools(mcp: FastMCP, toollist:str|None=None) -> None:
-    """Register all MCP tools with the given FastMCP instance."""
-    # INSEE.fr
-    if toollist==("insee"):
-        register_search_insee_documents(mcp)
-        register_get_insee_homepage(mcp)
-        register_get_insee_document(mcp)
-        register_search_insee_conjoncture(mcp)
-        register_search_insee_chiffreclef(mcp)
 
-    # Melodi
-    if toollist==("melodi"):
-        register_search_melodi_datasets(mcp)
-        register_search_melodi_modalities(mcp)
-        register_get_melodi_observations(mcp)
+def register_tools(mcp: FastMCP, settings: Settings) -> None:
+    """Register the enabled tools, handing each the settings it needs."""
+    if settings.enable_insee_tools:
+        mcp.add_tool(search_insee_documents)
+        mcp.add_tool(get_insee_homepage)
+        mcp.add_tool(get_insee_document)
+        mcp.add_tool(search_insee_conjoncture)
+        mcp.add_tool(search_insee_chiffrecle)
 
-    # RMES (SPARQL)
-    if toollist==("rmes"):
-        register_rmes_list_graphs(mcp)
-        register_rmes_describe_resource(mcp)
-        register_rmes_run_sparql(mcp)
+    if settings.enable_melodi_tools:
+        mcp.add_tool(search_melodi_datasets)
+        mcp.add_tool(search_melodi_modalities)
+        mcp.add_tool(get_melodi_observations)
 
-    else:
-        register_search_insee_documents(mcp)
-        register_get_insee_homepage(mcp)
-        register_get_insee_document(mcp)
-        register_search_insee_conjoncture(mcp)
-        register_search_insee_chiffreclef(mcp)
-        register_search_melodi_datasets(mcp)
-        register_search_melodi_modalities(mcp)
-        register_get_melodi_observations(mcp)
-        register_rmes_list_graphs(mcp)
-        register_rmes_describe_resource(mcp)
-        register_rmes_run_sparql(mcp)
-        register_extras_send_feedback(mcp)
+    if settings.enable_rmes_tools:
+        mcp.add_tool(search_rmes_graphs)
+        mcp.add_tool(describe_rmes_resource)
+        mcp.add_tool(run_rmes_sparql)
+
+    if settings.enable_feedback_tool:
+        mcp.add_tool(send_feedback)

@@ -1,0 +1,105 @@
+# Local development stack: Elasticsearch with the INSEE data, the MCP server, and the Inspector.
+#
+#   cp .env.example .env          # once
+#   docker compose up --build     # first run pulls ~1.3 GB of index data
+#
+# Then open the Inspector at http://localhost:6274 and connect it to:
+#
+#   http://mcpdiffusion:8000/mcp        (transport: Streamable HTTP)
+#
+# To work against an Elasticsearch you already have, put ES_HOST in your .env and start only the
+# server, skipping the two Elasticsearch containers:
+#
+#   docker compose up --build mcpdiffusion inspector
+
+services:
+  # Elasticsearch built from Dockerfile.elasticsearch, so it runs native on arm64 and amd64.
+  elasticsearch:
+    build:
+      context: .
+      dockerfile: Dockerfile.elasticsearch
+    image: mcpdiffusion-elasticsearch:local
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: -Xms2g -Xmx2g
+    ports:
+      - "9200:9200"
+    healthcheck:
+      # A green or yellow cluster is ready to serve; a single node is yellow by design, since
+      # replicas have nowhere to go.
+      test: ["CMD-SHELL", "curl -sf 'http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=1s' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+
+  # Loads the snapshot into Elasticsearch, then exits. Runs on every `up`; restoring an index that
+  # is already there is refused by Elasticsearch, which the script treats as success.
+  es-restore:
+    image: curlimages/curl:8.5.0
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    restart: "no"
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        set -eu
+        ES=http://elasticsearch:9200
+
+        echo "Registering the snapshot repository..."
+        curl -sf -X PUT "$$ES/_snapshot/insee_snapshots" \
+          -H 'Content-Type: application/json' \
+          -d '{"type":"fs","settings":{"location":"/usr/share/elasticsearch/backups"}}' > /dev/null
+
+        SNAPSHOT=$$(curl -sf "$$ES/_snapshot/insee_snapshots/_all" \
+          | sed -n 's/.*"snapshot":"\([^"]*\)".*/\1/p' | head -n1)
+        if [ -z "$$SNAPSHOT" ]; then
+          echo "No snapshot found in the repository." >&2
+          exit 1
+        fi
+
+        if curl -sf "$$ES/produit" > /dev/null 2>&1; then
+          echo "Indexes already present, nothing to restore."
+          exit 0
+        fi
+
+        echo "Restoring snapshot $$SNAPSHOT..."
+        curl -sf -X POST "$$ES/_snapshot/insee_snapshots/$$SNAPSHOT/_restore?wait_for_completion=true" \
+          -H 'Content-Type: application/json' -d '{}' > /dev/null
+        echo "Restore complete."
+
+  mcpdiffusion:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: mcpdiffusion:local
+    depends_on:
+      es-restore:
+        condition: service_completed_successfully
+    env_file:
+      - .env
+    environment:
+      # Listen on every interface: the container's loopback is not reachable from the host.
+      MCP_HOST: 0.0.0.0
+      # Defaults to the service above, but an ES_HOST in your .env wins -- which is what lets you
+      # point at an existing Elasticsearch and skip these containers entirely.
+      ES_HOST: ${ES_HOST:-http://elasticsearch:9200}
+    ports:
+      - "8000:8000"
+
+  # Official MCP debugging UI: lists the server's tools and calls them by hand, no LLM involved.
+  inspector:
+    image: ghcr.io/modelcontextprotocol/inspector:latest
+    depends_on:
+      mcpdiffusion:
+        condition: service_healthy
+    ports:
+      - "6274:6274"   # web UI
+      - "6277:6277"   # the proxy it talks to the server through
+
+volumes:
+  elasticsearch-data:

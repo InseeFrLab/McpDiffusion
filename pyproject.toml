@@ -4,8 +4,8 @@ version = "0.1.0"
 description = "MCP server for INSEE data diffusion"
 requires-python = ">=3.12"
 dependencies = [
-    "fastmcp==3.4.2",
-    "elasticsearch==9.5.0",
+    "fastmcp>=4.0.0",
+    "elasticsearch[async]==9.5.0",
     "uvicorn==0.52.4",
     "requests==2.34.2",
     "beautifulsoup4==4.15.0",
@@ -13,8 +13,8 @@ dependencies = [
     "starlette==1.6.0",
     "httpx==0.28.1",
     "python-dotenv==1.2.3",
+    "pydantic-settings>=2.0.0",
     "trafilatura==2.2.0",
-    "limits>=5.8.0",
 ]
 
 [build-system]
@@ -28,7 +28,43 @@ packages = ["src/mcpdiffusion"]
 dev = [
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4.0",
+    "pre-commit>=4.5.1",
+    "ruff>=0.15.4",
 ]
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+# B904 is off: Python keeps the original exception either way, so `raise ... from exc` only changes the
+# wording in a traceback. include_traceback on ErrorHandlingMiddleware is what makes causes recoverable.
+ignore = ["B904"]
+select = [
+    "E", # pycodestyle errors
+    "F", # pyflakes
+    "I", # isort
+    "B", # flake8-bugbear - catches common bug patterns
+    "UP", # pyupgrade - enforces modern syntax, including `str | None` over `Optional[str]`
+    # Only the call-site rule of flake8-boolean-trap: a bare `True` in a call reads as nothing.
+    # FBT001/FBT002 are left off because a tool's boolean parameter is a named field of its schema.
+    "FBT003", # flake8-boolean-trap
+]
+
+[tool.ruff.lint.flake8-bugbear]
+# B008 forbids calls in argument defaults, because a shared mutable would leak between calls.
+# These two build a dependency marker, not a value: FastMCP resolves them per request, so the
+# default is never what the function receives.
+extend-immutable-calls = [
+    "fastmcp.dependencies.Depends",
+    "fastmcp.dependencies.CurrentContext",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Long literal statistics, pending replacement by a live source.
+"src/mcpdiffusion/data/insee/indicators.py" = ["E501"]
+
+[tool.ruff.format]
+docstring-code-format = true
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

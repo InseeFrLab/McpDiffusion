@@ -17,6 +17,9 @@ async def describe_rmes_resource(
     celles ou elle est objet (utile pour remonter des relations skos:broader par exemple).
     Restreins avec `graph_uri` si tu sais deja ou chercher -- sinon la recherche se fait sur tous les
     graphes, ce qui est plus lent.
+
+    WHEN TO USE
+    - You already know a resource URI and want every property attached to it.
     """
     properties = await rmes_graph_store_service.describe_resource(
         resource_uri=resource_uri,

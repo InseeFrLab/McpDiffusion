@@ -56,6 +56,14 @@ async def get_melodi_observations(
     Observations carry dimensions, attributes and the numeric measure with its unit. An empty
     list means no rows matched; a structured error means the upstream API failed or the inputs
     were invalid.
+
+    WHEN TO USE
+    - You already know the exact `dataset_id` (from `search_melodi_datasets`) AND the modality codes you want to
+      filter on (from `search_melodi_modalities`).
+
+    WHEN NOT TO USE
+    - You are still looking for the right dataset. Use `search_melodi_datasets` first.
+    - You need concept definitions or code-list vocabularies. Use `run_rmes_sparql`.
     """
     # Business rule: fetching everything and filtering years here is deliberate. The API's own
     #   filter matches only periods starting on that date, so `TIME_PERIOD=2025` returns the

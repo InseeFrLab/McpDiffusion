@@ -28,6 +28,15 @@ async def search_insee_chiffrecle(
     regionales/departementales et statistiques factuelles simples.
 
     Retourne directement les tableaux synthetiques prets a l'emploi.
+
+    WHEN TO USE
+    - Population, inflation, chomage, PIB, salaires, prix par categorie, comparaisons geographiques (region,
+      departement, commune).
+    - Cas simples : 'Quelle est la population de X ?', 'Taux de chomage en 2024 ?', 'Inflation en juillet 2026 ?'
+
+    WHEN NOT TO USE
+    - Analyses detaillees, impacts/contexte, tendances complexes -> `search_insee_documents`.
+    - Donnees produit granulaires historiques -> `search_melodi_datasets`.
     """
     hits = await insee_index_service.search_chiffrecle(
         query=query,

@@ -27,6 +27,12 @@ async def run_rmes_sparql(
     definitions de l'INSEE (elle ne contient PAS les chiffres/donnees, voir les tools MELODI
     pour ca).
 
+    WHEN TO USE
+    - Vocabulary, code definitions and classifications, once you know which graphs to target.
+
+    WHEN NOT TO USE
+    - You have not called `search_rmes_graphs` yet. Call it first to learn the available graph categories.
+
     Bonnes pratiques :
     - Toujours filtrer sur un ou plusieurs graphes precis avec GRAPH <uri> { ... } ou
       VALUES ?g { <uri1> <uri2> } plutot que de scanner tous les graphes.

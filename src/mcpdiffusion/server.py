@@ -1,6 +1,7 @@
 """Entrypoint: builds the settings, the clients and the MCP application, then serves it over HTTP."""
 
 import logging
+from textwrap import dedent
 
 import uvicorn
 from fastmcp import FastMCP
@@ -9,7 +10,6 @@ from fastmcp.server.middleware.logging import LoggingMiddleware
 from fastmcp.server.middleware.rate_limiting import SlidingWindowRateLimitingMiddleware
 from fastmcp.server.middleware.timing import TimingMiddleware
 
-from .instructions import build_instructions
 from .lifespan import build_lifespan
 from .logging import build_logging_config, configure_logging
 from .settings import load_settings
@@ -20,16 +20,30 @@ settings = load_settings()
 configure_logging(settings.log_level)
 logger = logging.getLogger(__name__)
 
+# Sent to the client in the handshake. Only what belongs to no single tool: which tool to call, and when,
+# is in the tool descriptions, where it reaches the model even when a client drops these instructions.
+
+# language=Markdown
+INSTRUCTIONS = dedent("""
+    This server exposes INSEE (French national statistics) data through three sources:
+
+    - insee.fr -- publications, rapid releases and headline indicators
+    - MELODI -- the dataset catalogue and the observations themselves
+    - RMES -- statistical metadata: definitions and nomenclatures. It holds no figures.
+
+    Rules that apply to every tool:
+
+    - Never guess a dataset id, a modality code, a document URL or a graph URI. Each is opaque and must come
+      from a discovery call first.
+    - The data is French. Search with French keywords and rich synonyms.
+    - An empty result is a valid answer, not a failure. It usually means the filters were too narrow.
+    - A tool description may point you at a tool from another source. Only the tools in your tool list exist
+      here; if a description names one you do not have, ignore it and use what you have.
+""").strip()
+
 mcp = FastMCP(
     "INSEE-mcp-diffusion",
-    # Routing guidance, delivered in the handshake so it reaches the caller without relying on a
-    # separate file being loaded. Built from the enabled families so it never names a missing tool.
-    instructions=build_instructions(
-        enable_insee_tools=settings.enable_insee_tools,
-        enable_melodi_tools=settings.enable_melodi_tools,
-        enable_rmes_tools=settings.enable_rmes_tools,
-        enable_feedback_tool=settings.enable_feedback_tool,
-    ),
+    instructions=INSTRUCTIONS,
     # Only AppToolError messages reach the caller; anything else is a bug and is replaced
     # by a generic message.
     mask_error_details=True,

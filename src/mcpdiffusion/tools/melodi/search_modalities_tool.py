@@ -26,6 +26,13 @@ async def search_melodi_modalities(
 
     Each matching column carries its `code`, its metadata text and the top-scoring
     `matching_modalities`. An empty list means nothing matched.
+
+    WHEN TO USE
+    - You have a `dataset_id` (from `search_melodi_datasets`) and want to find the exact modality code for a
+      concept like `cote de boeuf`, `Ile-de-France`, or `female Maria`.
+
+    WHEN NOT TO USE
+    - You don't yet know the dataset. Run `search_melodi_datasets` first.
     """
     results = await melodi_index_service.search_columns(
         dataset_id=dataset_id,

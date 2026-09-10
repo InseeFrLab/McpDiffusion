@@ -10,11 +10,15 @@ def send_feedback(
 ) -> FeedbackOutput:
     """Report a problem or a suggestion about this server's tools to the people who maintain it.
 
-    Use it when a tool failed, returned an empty result you have good reason to think is wrong, or
-    carried a description that led you to the wrong call. The entry reaches the server operators,
-    not the person you are talking to, so it is not a way to answer them.
-
     Returns a confirmation carrying the timestamp under which the feedback was recorded.
+
+    WHEN TO USE
+    - A tool failed, returned an empty result you have good reason to think is wrong, or its description led you
+      to the wrong call. Say which tool and what you expected.
+
+    WHEN NOT TO USE
+    - To answer the person you are talking to. It reaches the server maintainers, not them.
+    - To keep notes for yourself, or to acknowledge a call that worked.
     """
     return record_feedback(
         author=author,

@@ -33,6 +33,21 @@ async def search_insee_documents(
 
     Write a rich natural-language query with synonyms, context, and the target year or geography
     when relevant. For 'essentiel sur...' publications prefer `search_insee_chiffrecle`.
+
+    WHEN TO USE
+    - Impact analyses (e.g., 'covid effects on tourism').
+    - Historical evolution and trends (e.g., 'unemployment 1990-2026').
+    - Detailed methodological or definitional content.
+    - Regional/departmental profiles with socioeconomic context.
+    - Specific thematic deep-dives (demography, labour market, inequalities, environment, housing, ...).
+    - Comparative studies or cross-cutting analyses.
+
+    WHEN NOT TO USE
+    - Simple factual questions ('What is X region's population?') -> `search_insee_chiffrecle`.
+    - Quick, up-to-date headline indicators -> `get_insee_homepage`.
+    - Latest monthly/quarterly rapid releases -> `search_insee_conjoncture`.
+    - Vocabulary / code definitions / classifications -> `run_rmes_sparql`.
+    - Granular historical time series (product prices, individual wages) -> `search_melodi_datasets`.
     """
     hits = await insee_index_service.search_documents(
         query=query,

@@ -27,6 +27,10 @@ async def search_rmes_graphs(
     Choisis une categorie precise dans le parametre `graph_category` pour cibler une famille, ou
     utilise `graph_uri_substring` pour une recherche libre par sous-chaine. Une categorie "autre" recueille
     tout graphe ne correspondant a aucune famille connue.
+
+    WHEN TO USE
+    - FIRST, to discover which graphs exist before writing a SPARQL query with `run_rmes_sparql` -- there are more
+      than 700 graphs.
     """
     rows = await rmes_graph_store_service.fetch_graph_rows()
     category = None if graph_category == GraphCategoryChoice.ALL else graph_category.value

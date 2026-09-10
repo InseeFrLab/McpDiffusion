@@ -22,6 +22,14 @@ async def get_insee_document(
 
     Every per-URL entry carries the same keys whether it succeeded or failed, so results can be
     iterated without type-sniffing.
+
+    WHEN TO USE
+    - You have a concrete URL of the form `/fr/statistiques/<id>` or `/fr/statistiques/<id>?sommaire=<sid>`,
+      returned by `search_insee_documents`, `search_insee_conjoncture` or `search_insee_chiffrecle`.
+
+    WHEN NOT TO USE
+    - You are still looking for the right publication. Use `search_insee_documents` first.
+    - You need a quick, up-to-date indicator. Use `get_insee_homepage`.
     """
     results = await insee_document_service.fetch_documents(
         document_urls=document_urls,

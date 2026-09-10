@@ -27,6 +27,14 @@ async def search_insee_conjoncture(
 
     The search is lexical and rewards keyword breadth, so provide several synonyms and related
     notions.
+
+    WHEN TO USE
+    - The user asks for the *latest* monthly/quarterly release of a named indicator (e.g. last month's consumer
+      confidence, last quarter's GDP estimate). Prefer the most recent edition.
+
+    WHEN NOT TO USE
+    - Generic up-to-date indicator on the homepage: `get_insee_homepage`.
+    - Deep, peer-reviewed analysis: `search_insee_documents`.
     """
     hits = await insee_index_service.search_conjoncture(
         query=query,

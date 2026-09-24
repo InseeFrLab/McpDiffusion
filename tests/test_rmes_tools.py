@@ -1,19 +1,18 @@
 """Unit tests for the three RMES tools (list_graphs, describe_resource, run_sparql).
 
 All HTTP calls to the real SPARQL endpoint are mocked via monkeypatch on
-`mcpdiffusion.helpers.rmes._get_client`, so these tests run offline.
+`mcpdiffusion.infra.sparql.get_sparql_client`, so these tests run offline.
 """
-from __future__ import annotations
 
 import httpx
 from fastmcp import Client
 
 from tests.conftest import _json_response, _out, _text_response
 
-
 # ===================================================================
 # Tests: tool registration & discovery
 # ===================================================================
+
 
 class TestToolDiscovery:
     async def test_three_rmes_tools_registered(self, rmes_client: Client):
@@ -45,17 +44,17 @@ SPARQL_SELECT_RESPONSE = {
 
 
 class TestRunSparql:
-    async def test_select_query_returns_bindings(
-        self, rmes_client: Client, mock_sparql
-    ):
+    async def test_select_query_returns_bindings(self, rmes_client: Client, mock_sparql):
         mock_sparql(lambda url, **kw: _json_response(SPARQL_SELECT_RESPONSE))
 
         async with rmes_client:
             raw = await rmes_client.call_tool(
                 "RMES_run_sparql",
-                {"params": {
-                    "full_sparql_query": "SELECT ?s ?label WHERE { ?s skos:prefLabel ?label } LIMIT 1",
-                }},
+                {
+                    "params": {
+                        "full_sparql_query": "SELECT ?s ?label WHERE { ?s skos:prefLabel ?label } LIMIT 1",
+                    }
+                },
             )
 
         result = _out(raw)
@@ -64,27 +63,25 @@ class TestRunSparql:
         assert len(result["bindings"]) == 1
         assert result["bindings"][0]["label"]["value"] == "Agriculture"
 
-    async def test_construct_query_returns_turtle(
-        self, rmes_client: Client, mock_sparql
-    ):
+    async def test_construct_query_returns_turtle(self, rmes_client: Client, mock_sparql):
         turtle_data = "<http://ex.org/s> <http://ex.org/p> <http://ex.org/o> ."
         mock_sparql(lambda url, **kw: _text_response(turtle_data))
 
         async with rmes_client:
             raw = await rmes_client.call_tool(
                 "RMES_run_sparql",
-                {"params": {
-                    "full_sparql_query": "CONSTRUCT { ?s ?p ?o } WHERE { ?s ?p ?o } LIMIT 1",
-                }},
+                {
+                    "params": {
+                        "full_sparql_query": "CONSTRUCT { ?s ?p ?o } WHERE { ?s ?p ?o } LIMIT 1",
+                    }
+                },
             )
 
         result = _out(raw)
         assert result["format"] == "turtle"
         assert "<http://ex.org/s>" in result["turtle"]
 
-    async def test_empty_query_returns_error(
-        self, rmes_client: Client, mock_sparql
-    ):
+    async def test_empty_query_returns_error(self, rmes_client: Client, mock_sparql):
         mock_sparql(lambda url, **kw: _json_response({}))
 
         async with rmes_client:
@@ -97,9 +94,7 @@ class TestRunSparql:
         assert result["error"] is not None
         assert result["error"]["type"] == "EMPTY_QUERY"
 
-    async def test_limit_auto_added_when_missing(
-        self, rmes_client: Client, mock_sparql
-    ):
+    async def test_limit_auto_added_when_missing(self, rmes_client: Client, mock_sparql):
         captured_queries = []
 
         def handler(url, **kw):
@@ -111,10 +106,12 @@ class TestRunSparql:
         async with rmes_client:
             raw = await rmes_client.call_tool(
                 "RMES_run_sparql",
-                {"params": {
-                    "full_sparql_query": "SELECT ?s WHERE { ?s ?p ?o }",
-                    "max_rows": 50,
-                }},
+                {
+                    "params": {
+                        "full_sparql_query": "SELECT ?s WHERE { ?s ?p ?o }",
+                        "max_rows": 50,
+                    }
+                },
             )
 
         result = _out(raw)
@@ -148,14 +145,13 @@ GRAPH_LIST_SPARQL_RESPONSE = {
 
 
 class TestListGraphs:
-    async def test_list_graphs_default(
-        self, rmes_client: Client, mock_sparql
-    ):
+    async def test_list_graphs_default(self, rmes_client: Client, mock_sparql):
         mock_sparql(lambda url, **kw: _json_response(GRAPH_LIST_SPARQL_RESPONSE))
 
         async with rmes_client:
             raw = await rmes_client.call_tool(
-                "RMES_list_graphs", {"params": {}},
+                "RMES_list_graphs",
+                {"params": {}},
             )
 
         result = _out(raw)
@@ -165,9 +161,7 @@ class TestListGraphs:
         assert "nomenclatures" in category_keys
         assert "geographie" in category_keys
 
-    async def test_list_graphs_filter_by_contains(
-        self, rmes_client: Client, mock_sparql
-    ):
+    async def test_list_graphs_filter_by_contains(self, rmes_client: Client, mock_sparql):
         mock_sparql(lambda url, **kw: _json_response(GRAPH_LIST_SPARQL_RESPONSE))
 
         async with rmes_client:
@@ -181,9 +175,7 @@ class TestListGraphs:
         assert result["categories"][0]["category"] == "nomenclatures"
         assert result["categories"][0]["graphs"] is not None
 
-    async def test_list_graphs_filter_by_category(
-        self, rmes_client: Client, mock_sparql
-    ):
+    async def test_list_graphs_filter_by_category(self, rmes_client: Client, mock_sparql):
         mock_sparql(lambda url, **kw: _json_response(GRAPH_LIST_SPARQL_RESPONSE))
 
         async with rmes_client:
@@ -196,9 +188,7 @@ class TestListGraphs:
         assert result["total_graphs_matched"] == 1
         assert all(c["category"] == "geographie" for c in result["categories"])
 
-    async def test_list_graphs_sparql_error(
-        self, rmes_client: Client, mock_sparql
-    ):
+    async def test_list_graphs_sparql_error(self, rmes_client: Client, mock_sparql):
         def handler(url, **kw):
             raise httpx.TimeoutException("timed out")
 
@@ -206,7 +196,8 @@ class TestListGraphs:
 
         async with rmes_client:
             raw = await rmes_client.call_tool(
-                "RMES_list_graphs", {"params": {}},
+                "RMES_list_graphs",
+                {"params": {}},
             )
 
         result = _out(raw)
@@ -245,9 +236,7 @@ DESCRIBE_SPARQL_RESPONSE = {
 
 
 class TestDescribeResource:
-    async def test_describe_resource_returns_properties(
-        self, rmes_client: Client, mock_sparql
-    ):
+    async def test_describe_resource_returns_properties(self, rmes_client: Client, mock_sparql):
         mock_sparql(lambda url, **kw: _json_response(DESCRIBE_SPARQL_RESPONSE))
 
         async with rmes_client:
@@ -265,9 +254,7 @@ class TestDescribeResource:
         assert labels[0]["lang"] == "fr"
         assert labels[0]["direction"] == "outgoing"
 
-    async def test_describe_resource_with_graph_filter(
-        self, rmes_client: Client, mock_sparql
-    ):
+    async def test_describe_resource_with_graph_filter(self, rmes_client: Client, mock_sparql):
         captured_queries = []
 
         def handler(url, **kw):
@@ -279,18 +266,18 @@ class TestDescribeResource:
         async with rmes_client:
             await rmes_client.call_tool(
                 "RMES_describe_resource",
-                {"params": {
-                    "uri": "http://id.insee.fr/codes/naf2025/section/A",
-                    "graph": "http://rdf.insee.fr/graphes/codes/naf2025",
-                }},
+                {
+                    "params": {
+                        "uri": "http://id.insee.fr/codes/naf2025/section/A",
+                        "graph": "http://rdf.insee.fr/graphes/codes/naf2025",
+                    }
+                },
             )
 
         assert "VALUES ?g" in captured_queries[0]
         assert "codes/naf2025" in captured_queries[0]
 
-    async def test_describe_resource_sparql_error(
-        self, rmes_client: Client, mock_sparql
-    ):
+    async def test_describe_resource_sparql_error(self, rmes_client: Client, mock_sparql):
         def handler(url, **kw):
             raise httpx.TimeoutException("timed out")
 
@@ -307,9 +294,7 @@ class TestDescribeResource:
         assert result["error"] is not None
         assert result["error"]["type"] == "TIMEOUT"
 
-    async def test_describe_resource_empty_result(
-        self, rmes_client: Client, mock_sparql
-    ):
+    async def test_describe_resource_empty_result(self, rmes_client: Client, mock_sparql):
         empty_response = {
             "head": {"vars": ["g", "direction", "p", "o"]},
             "results": {"bindings": []},

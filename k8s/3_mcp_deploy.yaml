@@ -45,8 +45,19 @@ spec:
           env:
           - name: ES_HOST
             value: "http://elasticsearch-service:9200"
-          - name: ES_HOST_LOCAL
-            value: "http://elasticsearch-service:9200"
+          # The hostname the Ingress publishes. Without it ALLOWED_HOSTS defaults to "*",
+          # which accepts any Host header and makes the check pointless.
+          - name: ALLOWED_HOSTS
+            value: '["mcpdiffusion.lab.sspcloud.fr"]'
+          # No browser client calls this server today, so no cross-origin site is allowed.
+          - name: ALLOWED_ORIGINS
+            value: '[]'
+          # The Ingress controller reaches the pod from a cluster IP that changes, so the
+          # forwarded caller address is believed from any peer. Uvicorn otherwise trusts only
+          # 127.0.0.1, sees every request as coming from the Ingress, and rate limits all
+          # callers as one. Keep the pod reachable only through the Ingress.
+          - name: TRUSTED_PROXY_HOSTS
+            value: '["*"]'
           # Optional resources block – adjust as needed
           resources:
             limits:

@@ -1,0 +1,31 @@
+# Everything the image does not need. Without this the whole working tree -- .venv
+# included -- is uploaded to the daemon on every build.
+
+# Virtual environments and caches
+.venv/
+__pycache__/
+*.py[cod]
+.ruff_cache/
+.pytest_cache/
+.mypy_cache/
+
+# Version control and CI
+.git/
+.github/
+.gitignore
+
+# Local configuration and secrets
+*.env
+!.env.example
+.idea/
+.claude/
+.mcp.json
+
+# Not part of the runtime
+tests/
+docs/
+k8s/
+*.md
+Dockerfile*
+docker-compose*.yml
+.pre-commit-config.yaml

@@ -1,5 +1,7 @@
 # McpDiffusion
 
+![](assets/logo_mcpdiffusion.png)
+
 > **BETA** — This project is in BETA. It should not be considered a finished nor an official product supported by INSEE.
 
 MCPDiffusion is a MCP server that exposes INSEE (French National Institute of Statistics and Economic Studies) public data to Large Language Models. It combines three INSEE data sources behind a single [Model Context Protocol](https://modelcontextprotocol.io/) endpoint so that an LLM client can discover and call them as native tools.

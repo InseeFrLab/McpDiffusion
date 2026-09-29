@@ -4,12 +4,36 @@
   <img src="assets/logo_mcpdiffusion.png" alt="McpDiffusion logo" width="250">
 </p>
 
+<!-- ─── BETA BADGE ───────────────────────────────────────────────────────── -->
+![Status: BETA](https://img.shields.io/badge/status-BETA-yellow?style=for-the-badge)
 
-> **BETA** — This project is in BETA. It should not be considered a finished nor an official product supported by INSEE.
+> **⚠️  BETA – NOT PRODUCTION READY**  
+> This project is **still in beta**. It should **not** be considered a finished or officially‑supported product from INSEE.
+
+> **⚠️  DATA STALENESS**  
+> The underlying databases are **static snapshots** that were last synchronized in **July 2026**. They are **not kept in real‑time sync** with INSEE’s databases
+
+---
 
 MCPDiffusion is a MCP server that exposes INSEE (French National Institute of Statistics and Economic Studies) public data to Large Language Models. It combines three INSEE data sources behind a single [Model Context Protocol](https://modelcontextprotocol.io/) endpoint so that an LLM client can discover and call them as native tools.
 
-Server's URL : https://mcpdiffusion.lab.sspcloud.fr/mcp
+**Server’s URL**: <https://mcpdiffusion.lab.sspcloud.fr/mcp>
+
+---  
+
+### En français
+
+> **⚠️  BÊTA – NE PAS UTILISER EN PRODUCTION**  
+> Ce projet est **encore en phase bêta**. Il ne doit **pas** être considéré comme un produit fini ou officiellement supporté par l’INSEE.
+
+> **⚠️  DONNÉES NON À JOUR**  
+> Les bases de données sont des **instantanés figés** dont la dernière synchronisation date de **juillet 2026**. Elles ne sont **pas synchronisées en temps réel** avec les bases de données de l’INSEE
+
+---
+
+**MCPDiffusion** est un serveur MCP qui met à disposition de modèles de langage (LLM) les données publiques de l’INSEE (Institut national de la statistique et des études économiques). Il regroupe trois sources de données de l’INSEE derrière un unique point d’accès **Model Context Protocol**, de sorte qu’un client LLM puisse les découvrir et les invoquer comme des outils natifs.
+
+**URL du serveur** : https://mcpdiffusion.lab.sspcloud.fr/mcp
 
 ## Table of Contents
 

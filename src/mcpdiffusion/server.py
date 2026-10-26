@@ -27,7 +27,6 @@ logger = logging.getLogger(__name__)
 INSTRUCTIONS = dedent("""
     This server exposes INSEE (French national statistics) data through three sources:
 
-    - insee.fr -- publications, rapid releases and headline indicators
     - MELODI -- the dataset catalogue and the observations themselves
     - RMES -- statistical metadata: definitions and nomenclatures. It holds no figures.
 

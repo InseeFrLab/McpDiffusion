@@ -67,7 +67,6 @@ MCPDiffusion is a MCP server that exposes INSEE (French National Institute of St
 |---|---|---|
 | **RMES** | SPARQL endpoint at `https://rdf.insee.fr/sparql` | INSEE statistical ontology: vocabulary, concept definitions (SKOS/XKOS). Works **without** any local dependency. |
 | **MELODI** | REST API + ElasticSearch index | INSEE data catalogue: search datasets, list columns, fetch filtered observations. |
-| **insee.fr** | HTTP scraping | Official INSEE publications, *Informations rapides*, and the homepage key indicators. |
 
 External references:
 - Publications: https://www.insee.fr/en/statistiques
@@ -89,23 +88,23 @@ External references:
 │  ┌────────────────────────────────────────┐  │
 │  │  tools/__init__.py — register_tools()  │  │
 │  └────────────────────────────────────────┘  │
-│         │              │             │       │
-│         ▼              ▼             ▼       │
-│   ┌──────────┐   ┌──────────┐   ┌──────────┐ │
-│   │  INSEEFR │   │  MELODI  │   │   RMES   │ │
-│   │   _*     │   │   _*     │   │  _*      │ │
-│   └────┬─────┘   └────┬─────┘   └────┬─────┘ │
-└────────┼──────────────┼──────────────┼───────┘
-         │              │              │
-         │              │              ▼
-         │              │       ┌─────────────────┐
-         │              │       │  rdf.insee.fr   │
-         │              │       │  (SPARQL)       │
-         │              │       └─────────────────┘
+│         │              │                     │
+│         ▼              ▼                     │
+│   ┌──────────┐   ┌──────────┐                │
+│   │  MELODI  │   │   RMES   │                │
+│   │   _*     │   │  _*      │                │
+|   └────┬─────┘   └────┬─────┘                │
+└────────┼──────────────┼──────────────────────┘
+         │              │              
+         │              │              
+         │              │       
+         │              │       
+         │              │       
+         │              │       
          ▼              ▼
    ┌────────────┐  ┌────────────┐
-   │  insee.fr  │  │ Elastic    │
-   │  (HTTP)    │  │ Search     │
+   │rdf.insee.fr│  │ Elastic    │
+   │  (SPARQL)  │  │ Search     │
    └────────────┘  └────────────┘
 ```
 
@@ -115,11 +114,6 @@ The server boots, loads environment variables, calls `register_tools(mcp)` to at
 
 | Tool | Source | Description |
 |---|---|---|
-| `get_insee_homepage` | insee.fr | Retrieve the latest key indicators published on the INSEE homepage (inflation, unemployment, GDP, …). Prefer this for generic, up-to-date questions. |
-| `search_insee_documents` | insee.fr | Search the INSEE catalogue of detailed publications (Insee Première, Insee Analyses, Dossiers, Références, Chiffres-clés, …). |
-| `get_insee_document` | insee.fr | Fetch and parse a specific INSEE publication from a known URL (`/fr/statistiques/<id>`). |
-| `search_insee_conjoncture` | insee.fr | Search the *Informations rapides* (rapid releases) index by topic, date and geography. |
-| `search_insee_chiffreclef` | insee.fr | Search key figures and synthetic statistics (population, regional comparisons, simple factual questions). |
 | `search_melodi_datasets` | MELODI | Search the Melodi dataset catalogue with a natural-language French query. |
 | `search_melodi_modalities` | MELODI | Given a dataset and column identifiers, rank the most relevant modality codes/labels for a free-text query. |
 | `get_melodi_observations` | MELODI | Retrieve filtered observations from a Melodi dataset (dimensions, attributes, numeric measure with unit). |
@@ -279,27 +273,72 @@ Any client supporting the MCP HTTP transport can be configured the same way:
 ## Project Structure
 
 ```
-mcp_diffusion/
-├── Dockerfile
-├── README.md
-├── LICENSE
-└── mcpdiffusion/
-    ├── server.py                # FastMCP entrypoint (Uvicorn + register_tools)
-    ├── requirements.txt
-    ├── .env.example
-    ├── helpers/
-    │   └── logging.py           # logging config + @log_tool decorator
-    └── tools/
-        ├── __init__.py          # register_tools(): enable/disable tools here
-        ├── env.py               # tool metadata + theme/geo dictionaries
-        ├── INSEEFR_get_homepage.py
-        ├── INSEEFR_search_documents.py
-        ├── INSEEFR_get_documents.py
-        ├── INSEEFR_get_conjoncture.py
-        ├── MELODI_search_dataset.py
-        ├── MELODI_get_columns.py
-        ├── MELODI_get_dataset.py
-        └── RMES_search_graph.py
+  McpDiffusion/                                                                                              
+  ├── k8s/                                  # Kubernetes manifest
+  │   ├── 1_es_deploy.yaml
+  │   ├── 2_es_restore.yaml
+  │   └── 3_mcp_deploy.yaml
+  ├── src/mcpdiffusion/                     # Source code         
+  │   ├── data/
+  │   │   └── rmes/
+  │   │       └── graph_categories.py
+  │   ├── dependencies/
+  │   │   ├── melodi.py
+  │   │   └── rmes.py
+  │   ├── errors/
+  │   │   ├── elasticsearch_tool_error_handler.py
+  │   │   └── error.py
+  │   ├── lifespan/
+  │   │   ├── elasticsearch.py
+  │   │   ├── insee.py
+  │   │   ├── melodi.py
+  │   │   └── rmes.py
+  │   ├── models/
+  │   │   ├── feedback.py
+  │   │   ├── melodi.py
+  │   │   └── rmes.py
+  │   ├── services/
+  │   │   ├── feedback.py
+  │   │   ├── melodi/
+  │   │   │   ├── api_service.py
+  │   │   │   └── index_service.py
+  │   │   └── rmes/
+  │   │       ├── graph_store_service.py
+  │   │       └── graph_taxonomy.py
+  │   ├── tools/
+  │   │   ├── melodi/
+  │   │   │   ├── get_observations_tool.py
+  │   │   │   ├── search_datasets_tool.py
+  │   │   │   └── search_modalities_tool.py
+  │   │   ├── rmes/
+  │   │   │   ├── describe_resource_tool.py
+  │   │   │   ├── run_sparql_tool.py
+  │   │   │   └── search_graphs_tool.py
+  │   │   └── send_feedback_tool.py
+  │   ├── utils/
+  │   │   └── client_host.py
+  │   ├── logging.py
+  │   ├── server.py
+  │   └── settings.py
+  ├── tests/
+  │   ├── conftest.py
+  │   ├── test_feedback_service.py
+  │   ├── test_insee_document_service.py
+  │   ├── test_insee_search_service.py
+  │   ├── test_melodi_service.py
+  │   ├── test_middleware.py
+  │   ├── test_rmes_service.py
+  │   └── test_rmes_tools.py
+  ├── .env.example
+  ├── .mcp.json
+  ├── docker-compose.yml
+  ├── Dockerfile
+  ├── Dockerfile.elasticsearch
+  ├── pyproject.toml
+  ├── CLAUDE.md
+  ├── SKILL.md
+  ├── LICENSE
+  └── README.md
 ```
 
 Each tool lives in its own file and is registered by `tools/__init__.py`. To **disable** a tool, comment out its import and the corresponding call in `register_tools()`.

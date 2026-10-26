@@ -44,18 +44,7 @@ def build_lifespan(settings: Settings) -> Lifespan:
                     )
                 )
 
-                if settings.enable_insee_tools:
-                    context |= await stack.enter_async_context(
-                        insee_lifespan(
-                            elasticsearch_client=elasticsearch_client,
-                            base_url=settings.insee_base_url,
-                            request_timeout_seconds=settings.insee_request_timeout_seconds,
-                            connect_timeout_seconds=settings.insee_connect_timeout_seconds,
-                            publications_index=settings.es_index_publications,
-                            document_max_markdown_chars=settings.insee_document_max_markdown_chars,
-                        )
-                    )
-
+                
                 if settings.enable_melodi_tools:
                     context |= await stack.enter_async_context(
                         melodi_lifespan(

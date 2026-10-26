@@ -62,7 +62,7 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def require_elasticsearch_when_it_is_searched(self) -> "Settings":
         """Fail at startup rather than on the first search that needs a host."""
-        if self.es_host is None and (self.enable_insee_tools or self.enable_melodi_tools):
+        if self.es_host is None and self.enable_melodi_tools:
             raise ValueError(
                 "ES_HOST is required because the insee.fr or Melodi tools are enabled. "
                 "Set it, or disable those families with ENABLE_INSEE_TOOLS=false and "

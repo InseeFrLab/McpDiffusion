@@ -28,7 +28,7 @@ def build_lifespan(settings: Settings) -> Lifespan:
         # insee.fr and Melodi search the same index, so they share one client. The settings
         # validator guarantees a host whenever either is enabled, which is what makes `es_host`
         # non-None here and lets the client take a plain `str`.
-        es_host = settings.es_host if (settings.enable_insee_tools or settings.enable_melodi_tools) else None
+        es_host = settings.es_host if settings.enable_melodi_tools else None
 
         async with AsyncExitStack() as stack:
             context: dict[str, Any] = {}

@@ -20,7 +20,6 @@ class Settings(BaseSettings):
 
     # Tool selection ---------------------------------------------------------------------------------------------------
     # insee.fr, the website. MELODI and RMES are INSEE sources too; this flag is only the site.
-    enable_insee_tools: bool = True
     enable_melodi_tools: bool = True
     enable_rmes_tools: bool = True
     # Reporting only: it records to the server log and needs no backend.
@@ -30,7 +29,6 @@ class Settings(BaseSettings):
     # Only the insee.fr and Melodi tools search Elasticsearch; rmes runs without it, so the
     # host is genuinely absent rather than empty when they are disabled.
     es_host: str | None = None
-    es_index_publications: str = "produit"
     es_index_melodi_datasets: str = "melodi_datasets"
     es_index_melodi_columns: str = "melodi_columns"
     # Elasticsearch is often internal with a self-signed certificate.
@@ -41,12 +39,6 @@ class Settings(BaseSettings):
     es_max_retries: int = 2
 
     # INSEE services ---------------------------------------------------------------------------------------------------
-    insee_base_url: str = "https://www.insee.fr"
-    insee_request_timeout_seconds: int = 30
-    insee_connect_timeout_seconds: int = 10
-    # A rendered publication is truncated past this many characters, so one document cannot
-    # fill the calling model's context. Tune it to the context budget of the client in use.
-    insee_document_max_markdown_chars: int = 30_000
     melodi_data_base_url: str = "https://api.insee.fr/melodi/data"
     melodi_request_timeout_seconds: int = 30
     melodi_connect_timeout_seconds: int = 10
@@ -70,7 +62,7 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def require_elasticsearch_when_it_is_searched(self) -> "Settings":
         """Fail at startup rather than on the first search that needs a host."""
-        if self.es_host is None and (self.enable_insee_tools or self.enable_melodi_tools):
+        if self.es_host is None and self.enable_melodi_tools:
             raise ValueError(
                 "ES_HOST is required because the insee.fr or Melodi tools are enabled. "
                 "Set it, or disable those families with ENABLE_INSEE_TOOLS=false and "

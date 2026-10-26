@@ -16,7 +16,6 @@ from fastmcp.server.lifespan import Lifespan, lifespan
 
 from ..settings import Settings
 from .elasticsearch import elasticsearch_lifespan
-from .insee import insee_lifespan
 from .melodi import melodi_lifespan
 from .rmes import rmes_lifespan
 
